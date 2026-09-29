@@ -56,7 +56,7 @@ jobs:
         if: matrix.target == 'windows'
         run: |
           flutter build windows --release
-          dart run msix:create
+          dart run msix:create --build-windows false --install-certificate false
 
       # 2. MACOS: Build raw app, install dmg packaging tool, and convert to .dmg
       - name: Build and Package macOS
