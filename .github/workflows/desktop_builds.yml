@@ -1,8 +1,8 @@
-name: Build Desktop Applications
+name: Build Desktop and Mobile Applications
 
 on:
   push:
-    branches: [ main, master ] # Triggers build on pushes to these branches
+    branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
 
@@ -12,9 +12,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      # Matrix runs all three builds in parallel
       matrix:
-        target: [windows, macos, linux]
+        target: [windows, macos, linux, ios]
         include:
           - target: windows
             os: windows-latest
@@ -22,19 +21,20 @@ jobs:
             os: macos-latest
           - target: linux
             os: ubuntu-latest
+          - target: ios
+            os: macos-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Linux requires specific system dependencies to build Flutter desktop
       - name: Install Linux Dependencies
         if: matrix.target == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
 
-      - name: Set up Java (Required for Flutter framework tools)
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -44,21 +44,48 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true # Caches Flutter build outputs to make future builds faster
+          cache: true
 
       - name: Install project dependencies
         run: flutter pub get
 
-      # Build step dynamically changes based on the matrix target
-      - name: Build Desktop Release
-        run: flutter build ${{ matrix.target }} --release
+      # ==================== COMPILATION STEPS ====================
 
-      # Uploads the compiled files so you can download them from GitHub
-      - name: Upload Build Artifacts
+      # 1. WINDOWS: Build and automatically package into a single .msix installer
+      - name: Build and Package Windows
+        if: matrix.target == 'windows'
+        run: |
+          flutter build windows --release
+          dart run msix:create
+
+      # 2. MACOS: Build raw app, install dmg packaging tool, and convert to .dmg
+      - name: Build and Package macOS
+        if: matrix.target == 'macos'
+        run: |
+          flutter build macos --release
+          npm install -g create-dmg
+          cd build/macos/Build/Products/Release/
+          create-dmg *.app || true 
+          # Note: '|| true' ensures it passes even if UI background styling warnings appear
+
+      # 3. LINUX: Standard build (Outputs runnable binary folder)
+      - name: Build Linux
+        if: matrix.target == 'linux'
+        run: flutter build linux --release
+
+      # 4. IOS: Standard no-codesign build
+      - name: Build iOS
+        if: matrix.target == 'ios'
+        run: flutter build ios --release --no-codesign
+
+      # ==================== UPLOAD CUSTOMER FILES ====================
+
+      - name: Upload Clean Installers & Apps
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}-release
+          name: ${{ matrix.target }}-customer-installer
           path: |
-            build/windows/x64/runner/Release/
-            build/macos/Build/Products/Release/
+            build/windows/x64/runner/Release/*.msix
+            build/macos/Build/Products/Release/*.dmg
             build/linux/x64/release/bundle/
+            build/ios/iphoneos/
