@@ -1,0 +1,579 @@
+# Static English -> Myanmar UI dictionary
+# Format: English<TAB>Myanmar
+# Keep database/internal identifiers in English; translate only user-facing text.
+# Use UiTranslation.t() for exact strings and UiTranslation.f() for templates with {placeholders}.
+
+POS System	POS စနစ်
+Point of Sale System	အရောင်းဆိုင် စီမံခန့်ခွဲမှုစနစ်
+Open menu	မီနူးဖွင့်ရန်
+Pay Yan	ပေးရန်
+Ya Yan	ရရန်
+Data Backup	ဒေတာ အရန်သိမ်းရန်
+Products	ကုန်ပစ္စည်းများ
+In-stock Products	လက်ကျန်ကုန်ပစ္စည်းများ
+Incoming Products	ဝင်လာသော ကုန်ပစ္စည်းများ
+Sale	အရောင်း
+Customer	ဖောက်သည်
+Customers	ဖောက်သည်များ
+Supplier	ပစ္စည်းပေးသွင်းသူ
+Suppliers	ပစ္စည်းပေးသွင်းသူများ
+Vouchers	ဘောင်ချာများ
+Income/Expense	ဝင်ငွေ/အသုံးစရိတ်
+Sales Report	အရောင်းအစီရင်ခံစာ
+Cylinder Cycles	ဓာတ်ငွေ့အိုး အဝင်အထွက်မှတ်တမ်း
+Cylinder Types	ဓာတ်ငွေ့အိုး အမျိုးအစားများ
+Welcome from 	မှ ကြိုဆိုပါသည် — 
+Kyal Sin Lay Energy & Tech Point of Sale System	Kyal Sin Lay Energy & Tech အရောင်းဆိုင် စီမံခန့်ခွဲမှုစနစ်
+Cancel	ပယ်ဖျက်ရန်
+Save	သိမ်းရန်
+OK	အိုကေ
+Select	ရွေးရန်
+Close	ပိတ်ရန်
+Delete	ဖျက်ရန်
+Remove	ဖယ်ရှားရန်
+View	ကြည့်ရန်
+Edit	တည်းဖြတ်ရန်
+Import	ထည့်သွင်းရန်
+Export	ထုတ်ယူရန်
+Erase	ဖျက်ပစ်ရန်
+Add	ထည့်ရန်
+Pay	ပေးရန်
+Receive	လက်ခံရန်
+Copy Details	အသေးစိတ်ကို ကူးယူရန်
+Save Voucher	ဘောင်ချာသိမ်းရန်
+Share as image	ပုံအဖြစ် မျှဝေရန်
+Save as photo	ဓာတ်ပုံအဖြစ် သိမ်းရန်
+Edit voucher	ဘောင်ချာတည်းဖြတ်ရန်
+Delete voucher	ဘောင်ချာဖျက်ရန်
+Delete voucher?	ဘောင်ချာဖျက်မည်လား?
+Delete product	ကုန်ပစ္စည်းဖျက်ရန်
+Delete product?	ကုန်ပစ္စည်းဖျက်မည်လား?
+Remove product?	ကုန်ပစ္စည်းဖယ်ရှားမည်လား?
+Delete incoming record	ဝင်ကုန်မှတ်တမ်းဖျက်ရန်
+Delete incoming record?	ဝင်ကုန်မှတ်တမ်းဖျက်မည်လား?
+Delete cylinder type?	ဓာတ်ငွေ့အိုးအမျိုးအစား ဖျက်မည်လား?
+Delete history record?	မှတ်တမ်းဖျက်မည်လား?
+Delete this history	ဤမှတ်တမ်းကို ဖျက်ရန်
+Delete this record	ဤမှတ်တမ်းကို ဖျက်ရန်
+Delete history	မှတ်တမ်းဖျက်ရန်
+View all history	မှတ်တမ်းအားလုံးကြည့်ရန်
+Payment amount	ပေးချေငွေပမာဏ
+Payment method	ပေးချေနည်းလမ်း
+Payment date 	ပေးချေသည့်ရက် 
+Cash	ငွေသား
+Bank	ဘဏ်
+Mobile	မိုဘိုင်းငွေပေးချေမှု
+Credit	အကြွေး
+Save payment	ပေးချေမှုသိမ်းရန်
+Payment history	ပေးချေမှုမှတ်တမ်း
+Payment History	ပေးချေမှုမှတ်တမ်း
+Amount paid (total 	ပေးထားသောငွေ (စုစုပေါင်း 
+Amount Paid (MMK)	ပေးထားသောငွေ (MMK)
+Amount paid to supplier	ပစ္စည်းပေးသွင်းသူထံ ပေးထားသောငွေ
+Payment Method	ပေးချေနည်းလမ်း
+Paid	ပေးပြီး
+Received	လက်ခံရရှိ
+Adjustment	ပြင်ဆင်ငွေ
+Balance	လက်ကျန်
+Outstanding	ကျန်ငွေ
+PARTIALLY PAID	တစ်စိတ်တစ်ပိုင်း ပေးပြီး
+PAID	ပေးပြီး
+UNPAID	မပေးရသေး
+Select transaction date	အရောင်းအဝယ်ရက် ရွေးရန်
+Select entry date	စာရင်းသွင်းရက် ရွေးရန်
+Select report date	အစီရင်ခံစာရက် ရွေးရန်
+Select Month	လ ရွေးရန်
+Select Year	နှစ် ရွေးရန်
+Select Date	ရက်စွဲ ရွေးရန်
+Date	ရက်စွဲ
+Year	နှစ်
+Daily	နေ့စဉ်
+Monthly	လစဉ်
+Yearly	နှစ်စဉ်
+Previous period	ယခင်ကာလ
+Next period	နောက်ကာလ
+Today	ယနေ့
+January	ဇန်နဝါရီ
+February	ဖေဖော်ဝါရီ
+March	မတ်
+April	ဧပြီ
+May	မေ
+June	ဇွန်
+July	ဇူလိုင်
+August	ဩဂုတ်
+September	စက်တင်ဘာ
+October	အောက်တိုဘာ
+November	နိုဝင်ဘာ
+December	ဒီဇင်ဘာ
+Add Entry	စာရင်းထည့်ရန်
+Income	ဝင်ငွေ
+Expense	အသုံးစရိတ်
+Description	ဖော်ပြချက်
+Amount	ပမာဏ
+Note (optional)	မှတ်ချက် (မဖြည့်လည်းရ)
+Summary	အနှစ်ချုပ်
+Linked payment transaction	ချိတ်ဆက်ထားသော ပေးချေမှုအရောင်းအဝယ်
+Transactions	အရောင်းအဝယ်များ
+Profit before expenses	အသုံးစရိတ်မနှုတ်မီ အမြတ်
+Profit after expenses	အသုံးစရိတ်နုတ်ပြီး အမြတ်
+No transactions for this period.	ဤကာလအတွင်း အရောင်းအဝယ်မရှိပါ။
+No sales recorded for this period.	ဤကာလအတွင်း အရောင်းမှတ်တမ်းမရှိပါ။
+Automatically generated	အလိုအလျောက် ဖန်တီးထားသည်
+Generate PDF report	PDF အစီရင်ခံစာ ဖန်တီးရန်
+PDF Report	PDF အစီရင်ခံစာ
+Add New Product	ကုန်ပစ္စည်းအသစ် ထည့်ရန်
+Edit Product	ကုန်ပစ္စည်းတည်းဖြတ်ရန်
+Product Catalog	ကုန်ပစ္စည်းစာရင်း
+Product name *	ကုန်ပစ္စည်းအမည် *
+Product	ကုန်ပစ္စည်း
+Type	အမျိုးအစား
+Variant / sub type	မျိုးကွဲ / အခွဲအမျိုးအစား
+Sub Type	အခွဲအမျိုးအစား
+Selling price	ရောင်းဈေး
+Selling price 2	ရောင်းဈေး ၂
+Selling price 3	ရောင်းဈေး ၃
+Cost per sale unit	တစ်ရောင်းယူနစ်အတွက် ကုန်ကျစရိတ်
+Cost	ကုန်ကျစရိတ်
+Optional	မဖြည့်လည်းရ
+This is a selling variant	ဤသည်မှာ ရောင်းချရန် မျိုးကွဲဖြစ်သည်
+Main stock product	အဓိက လက်ကျန်ကုန်ပစ္စည်း
+How is this variant sold?	ဤမျိုးကွဲကို မည်သို့ရောင်းမည်နည်း?
+By a fixed unit	သတ်မှတ်ယူနစ်ဖြင့်
+By kg or viss at sale	ရောင်းချချိန်တွင် ကီလို သို့မဟုတ် ပိဿာဖြင့်
+Advanced inventory settings	အဆင့်မြင့် လက်ကျန်စီမံမှု ဆက်တင်များ
+Usually leave these alone	ပုံမှန်အားဖြင့် မပြင်ဘဲထားပါ
+Stock unit	လက်ကျန်ယူနစ်
+Incoming unit	ဝင်ယူနစ်
+Sale unit	ရောင်းယူနစ်
+Incoming conversion	ဝင်ယူနစ်မှ လက်ကျန်သို့ ပြောင်းနှုန်း
+Sale conversion	ရောင်းယူနစ်မှ လက်ကျန်အသုံးပြုမှု ပြောင်းနှုန်း
+Additional selling prices	ထပ်ဆောင်း ရောင်းဈေးများ
+Default / preferred supplier	ပုံမှန် / နှစ်သက်ရာ ပစ္စည်းပေးသွင်းသူ
+No supplier selected	ပစ္စည်းပေးသွင်းသူ မရွေးရသေးပါ
+Create Product	ကုန်ပစ္စည်း ဖန်တီးရန်
+Save Changes	ပြင်ဆင်ချက်များ သိမ်းရန်
+Edit product	ကုန်ပစ္စည်းတည်းဖြတ်ရန်
+Qty	အရေအတွက်
+Unit	ယူနစ်
+Price 1	ဈေး ၁
+Last Incoming	နောက်ဆုံး ဝင်ကုန်
+Search product	ကုန်ပစ္စည်းရှာရန်
+Record Incoming Stock	ဝင်ကုန်လက်ကျန် မှတ်တမ်းတင်ရန်
+Select Main Stock Product	အဓိက လက်ကျန်ကုန်ပစ္စည်း ရွေးရန်
+No main stock products created yet	အဓိက လက်ကျန်ကုန်ပစ္စည်း မဖန်တီးရသေးပါ
+Current stock	လက်ရှိလက်ကျန်
+Incoming quantity	ဝင်ကုန်အရေအတွက်
+Stock added	ထပ်တိုးလက်ကျန်
+Cost per 	တစ်ခုလျှင် ကုန်ကျစရိတ် 
+Incoming date	ဝင်ကုန်ရက်
+Add Incoming Stock	ဝင်ကုန်လက်ကျန် ထည့်ရန်
+Incoming History	ဝင်ကုန်မှတ်တမ်း
+No incoming stock transactions yet.	ဝင်ကုန်လက်ကျန် အရောင်းအဝယ်မှတ်တမ်း မရှိသေးပါ။
+Balance MMK	လက်ကျန် MMK
+stock units	လက်ကျန်ယူနစ်များ
+stock unit(s)	လက်ကျန်ယူနစ်
+People	လူစာရင်း
+Category	အမျိုးအစား
+Entity or Person name	လုပ်ငန်း/လူအမည်
+Phone number	ဖုန်းနံပါတ်
+Address	လိပ်စာ
+Add 	ထည့်ရန် 
+Please enter a name	အမည်ထည့်ပါ
+Sale Page	အရောင်းစာမျက်နှာ
+Voucher Details	ဘောင်ချာအသေးစိတ်
+Select Registered Customer	စာရင်းသွင်းထားသော ဖောက်သည်ကို ရွေးရန်
+Customer Name (Manual Entry / Selected)	ဖောက်သည်အမည် (ကိုယ်တိုင်ထည့် / ရွေးထား)
+Product Type	ကုန်ပစ္စည်းအမျိုးအစား
+All Types	အမျိုးအစားအားလုံး
+All SubTypes	အခွဲအမျိုးအစားအားလုံး
+Select Product	ကုန်ပစ္စည်း ရွေးရန်
+Legacy loose-gas sale unit	ယခင် loose-gas ရောင်းယူနစ်
+Kg	ကီလို
+Viss	ပိဿာ
+Select Price	ဈေးနှုန်း ရွေးရန်
+Quantity	အရေအတွက်
+Add Item to Voucher	ဘောင်ချာထဲသို့ ပစ္စည်းထည့်ရန်
+Added Items:	ထည့်ထားသော ပစ္စည်းများ:
+Grand Total: MMK 	စုစုပေါင်း: MMK 
+Balance: MMK 	လက်ကျန်: MMK 
+VOUCHER	ဘောင်ချာ
+Prepared For: 	အတွက် ပြင်ဆင်ထားသည်: 
+Price	ဈေးနှုန်း
+No	အမှတ်
+Items	ပစ္စည်းများ
+Status	အခြေအနေ
+Total	စုစုပေါင်း
+Total Left	ကျန်ငွေစုစုပေါင်း
+Customer Sign	ဖောက်သည် လက်မှတ်
+Seller Sign	ရောင်းချသူ လက်မှတ်
+Sales Detail	အရောင်းအသေးစိတ်
+Sales Detail (continued)	အရောင်းအသေးစိတ် (ဆက်လက်)
+Yearly Sales Summary	နှစ်စဉ်အရောင်း အနှစ်ချုပ်
+Sales Count	အရောင်းအကြိမ်ရေ
+Sales	အရောင်း
+Expenses	အသုံးစရိတ်များ
+Net	အသားတင်
+YEAR TOTAL	နှစ်စုစုပေါင်း
+Voucher No.	ဘောင်ချာအမှတ်
+Profit	အမြတ်
+LPG Cost	LPG ကုန်ကျစရိတ်
+Total Sales	စုစုပေါင်းအရောင်း
+Profit Before Expenses	အသုံးစရိတ်မနှုတ်မီ အမြတ်
+Profit After Expenses	အသုံးစရိတ်နုတ်ပြီး အမြတ်
+Generated: 	ဖန်တီးသည့်ရက်: 
+Page 	စာမျက်နှာ 
+PDF generation failed:	PDF ဖန်တီးမှု မအောင်မြင်ပါ:
+Sales report	အရောင်းအစီရင်ခံစာ
+Add Type	အမျိုးအစားထည့်ရန်
+Add Cylinder Type	ဓာတ်ငွေ့အိုး အမျိုးအစားထည့်ရန်
+Cylinder category	ဓာတ်ငွေ့အိုး အမျိုးအစား
+Name of type	အမျိုးအစားအမည်
+Opening cylinder stock	အစဖွင့် ဓာတ်ငွေ့အိုးလက်ကျန်
+Set current quantity	လက်ရှိအရေအတွက် သတ်မှတ်ရန်
+Currently in our possession	လက်ရှိ ကျွန်ုပ်တို့ထံရှိသည်
+In our possession	ကျွန်ုပ်တို့ထံရှိသည်
+History	မှတ်တမ်း
+New Cylinder Cycle	ဓာတ်ငွေ့အိုး အဝင်အထွက်အသစ်
+Cylinder Type	ဓာတ်ငွေ့အိုး အမျိုးအစား
+How much we give	ပေးလိုက်သည့်အရေအတွက်
+How much we get	ရရှိသည့်အရေအတွက်
+Cycle date: 	အဝင်အထွက်ရက်: 
+Save Cylinder Cycle	ဓာတ်ငွေ့အိုး အဝင်အထွက် သိမ်းရန်
+Outstanding Customer Cylinders	ဖောက်သည်ထံကျန်နေသော ဓာတ်ငွေ့အိုးများ
+Cylinder Stock	ဓာတ်ငွေ့အိုးလက်ကျန်
+We have	ကျွန်ုပ်တို့ထံရှိသည်
+Everything is settled	အားလုံး ရှင်းပြီးပါပြီ
+Settled	ရှင်းပြီး
+Active 	လက်ရှိ 
+with customer	ဖောက်သည်ထံတွင်
+with us	ကျွန်ုပ်တို့ထံတွင်
+Customer owes us	ဖောက်သည်က ကျွန်ုပ်တို့ကို ပေးရန်ရှိသည်
+We owe customer	ကျွန်ုပ်တို့က ဖောက်သည်ကို ပေးရန်ရှိသည်
+Replace all data?	ဒေတာအားလုံးကို အစားထိုးမည်လား?
+Import Backup File	အရန်ဒေတာဖိုင် ထည့်သွင်းရန်
+Import from Clipboard	Clipboard မှ ထည့်သွင်းရန်
+Import Pasted Backup	ကူးထည့်ထားသော အရန်ဒေတာကို ထည့်သွင်းရန်
+Importing...	ထည့်သွင်းနေသည်...
+Save Backup File	အရန်ဒေတာဖိုင် သိမ်းရန်
+Copy Backup to Clipboard	အရန်ဒေတာကို Clipboard သို့ ကူးယူရန်
+Paste a smaller backup JSON here	အသေးစား အရန် JSON ကို ဤနေရာတွင် ကူးထည့်ပါ
+Danger zone	သတိထားရန် ဧရိယာ
+Erase All Data	ဒေတာအားလုံး ဖျက်ပစ်ရန်
+Backup is empty.	အရန်ဒေတာအလွတ်ဖြစ်နေပါသည်။
+The backup is empty.	အရန်ဒေတာအလွတ်ဖြစ်နေပါသည်။
+Save failed. Your last saved data was kept.	သိမ်းဆည်းမှု မအောင်မြင်ပါ။ နောက်ဆုံးသိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+Could not save data: 	ဒေတာသိမ်းဆည်း၍ မရပါ: 
+Data could not be saved. Your previous saved data was kept.	ဒေတာသိမ်းဆည်း၍ မရပါ။ ယခင်သိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+Data imported successfully	ဒေတာ အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ
+Import failed: 	ထည့်သွင်းမှု မအောင်မြင်ပါ: 
+Could not import the backup file: 	အရန်ဒေတာဖိုင် ထည့်သွင်း၍ မရပါ: 
+Clipboard import failed: 	Clipboard မှ ထည့်သွင်းမှု မအောင်မြင်ပါ: 
+Erase all data?	ဒေတာအားလုံး ဖျက်ပစ်မည်လား?
+All data erased	ဒေတာအားလုံး ဖျက်ပစ်ပြီးပါပြီ
+Data loaded, but the migration could not be saved.	ဒေတာဖတ်ပြီးပါပြီ၊ သို့သော် ပြောင်းရွှေ့ပြင်ဆင်မှုကို မသိမ်းနိုင်ပါ။
+Stored data could not be loaded safely: 	သိမ်းထားသောဒေတာကို လုံခြုံစွာ ဖတ်မရပါ: 
+Product name cannot be empty.	ကုန်ပစ္စည်းအမည် မဖြစ်မနေထည့်ရပါမည်။
+Product was not found.	ကုန်ပစ္စည်း မတွေ့ပါ။
+Incoming quantity must be greater than zero.	ဝင်ကုန်အရေအတွက်သည် သုညထက် ကြီးရပါမည်။
+Incoming cost cannot be negative.	ဝင်ကုန်ကုန်ကျစရိတ်သည် အနုတ်မဖြစ်ရပါ။
+Cost cannot be negative.	ကုန်ကျစရိတ်သည် အနုတ်မဖြစ်ရပါ။
+Paid amount must be between 0 and the incoming total.	ပေးချေငွေသည် ၀ နှင့် ဝင်ကုန်စုစုပေါင်းအကြား ဖြစ်ရပါမည်။
+Please select an existing main stock product first.	ရှိပြီးသား အဓိကလက်ကျန်ကုန်ပစ္စည်းကို အရင်ရွေးပါ။
+Selling variants cannot receive stock directly.	ရောင်းရန်မျိုးကွဲများထဲသို့ လက်ကျန်ကို တိုက်ရိုက်ထည့်၍မရပါ။
+Please enter a product name.	ကုန်ပစ္စည်းအမည်ထည့်ပါ။
+Please enter a cylinder type name.	ဓာတ်ငွေ့အိုးအမျိုးအစားအမည်ထည့်ပါ။
+Cylinder stock must be 0 or more.	ဓာတ်ငွေ့အိုးလက်ကျန်သည် ၀ သို့မဟုတ် ထို့ထက်များရပါမည်။
+Cylinder quantities must be 0 or more.	ဓာတ်ငွေ့အိုးအရေအတွက်သည် ၀ သို့မဟုတ် ထို့ထက်များရပါမည်။
+Please select a customer	ဖောက်သည်ကို ရွေးပါ
+Please add and select a cylinder type	ဓာတ်ငွေ့အိုးအမျိုးအစားကို ထည့်ပြီး ရွေးပါ
+Enter how much we give or receive	ပေးမည်/ရမည် အရေအတွက်ကို ထည့်ပါ
+Enter a description and a valid amount	ဖော်ပြချက်နှင့် မှန်ကန်သော ပမာဏကို ထည့်ပါ
+Enter a name and a valid amount	အမည်နှင့် မှန်ကန်သော ပမာဏကို ထည့်ပါ
+Select a product, sale unit, price, and a valid quantity.	ကုန်ပစ္စည်း၊ ရောင်းယူနစ်၊ ဈေးနှုန်းနှင့် မှန်ကန်သော အရေအတွက်ကို ရွေးပါ။
+Select a valid LPG sale unit.	မှန်ကန်သော LPG ရောင်းယူနစ်ကို ရွေးပါ။
+Add at least one item before saving the voucher	ဘောင်ချာမသိမ်းမီ အနည်းဆုံး ပစ္စည်းတစ်ခု ထည့်ပါ
+Could not save voucher: 	ဘောင်ချာသိမ်း၍ မရပါ: 
+Voucher saved successfully. Cha-ching!	ဘောင်ချာကို အောင်မြင်စွာ သိမ်းပြီးပါပြီ။ ချင့်!
+Voucher details copied to clipboard	ဘောင်ချာအသေးစိတ်ကို Clipboard သို့ ကူးယူပြီးပါပြီ
+Could not share the voucher: 	ဘောင်ချာမျှဝေ၍ မရပါ: 
+Could not save the voucher: 	ဘောင်ချာသိမ်း၍ မရပါ: 
+Could not generate the PDF report: 	PDF အစီရင်ခံစာ ဖန်တီး၍ မရပါ: 
+Yearly report saved to 	နှစ်စဉ်အစီရင်ခံစာကို သိမ်းပြီးပါပြီ: 
+Cannot be undone.	ပြန်လည်ပြင်ဆင်၍ မရပါ။
+Nothing to pay. All supplier balances are settled.	ပေးရန်မရှိတော့ပါ။ ပစ္စည်းပေးသွင်းသူ လက်ကျန်အားလုံး ရှင်းပြီးပါပြီ။
+Nothing to receive. All customer balances are settled.	ရရန်မရှိတော့ပါ။ ဖောက်သည် လက်ကျန်အားလုံး ရှင်းပြီးပါပြီ။
+No payment transactions recorded.	ပေးချေမှုအရောင်းအဝယ်မှတ်တမ်း မရှိပါ။
+No products yet. Create a product above first.	ကုန်ပစ္စည်းမရှိသေးပါ။ အပေါ်တွင် ကုန်ပစ္စည်းတစ်ခုကို အရင်ဖန်တီးပါ။
+No vouchers saved yet. Create one from the Sale page.	သိမ်းထားသော ဘောင်ချာမရှိသေးပါ။ အရောင်းစာမျက်နှာမှ တစ်ခုဖန်တီးပါ။
+No history recorded for this customer.	ဤဖောက်သည်အတွက် မှတ်တမ်းမရှိပါ။
+No history recorded for this type.	ဤအမျိုးအစားအတွက် မှတ်တမ်းမရှိပါ။
+No cylinder types have been added.	ဓာတ်ငွေ့အိုးအမျိုးအစား မထည့်ရသေးပါ။
+There is no history to delete for 	ဖျက်ရန် မှတ်တမ်းမရှိပါ: 
+All history for this type has been deleted.	ဤအမျိုးအစား၏ မှတ်တမ်းအားလုံးကို ဖျက်ပြီးပါပြီ။
+No customer currently has an outstanding cylinder balance.	လက်ရှိတွင် ဖောက်သည်ထံ ကျန်နေသော ဓာတ်ငွေ့အိုးလက်ကျန် မရှိပါ။
+Example: LPG Kg	ဥပမာ - LPG Kg
+Example: LPG	ဥပမာ - LPG
+Example: 220g, Viss, Kg	ဥပမာ - 220g, Viss, Kg
+Enter the essentials. Inventory rules are filled automatically for common products.	အခြေခံအချက်များကို ထည့်ပါ။ ပုံမှန်ကုန်ပစ္စည်းများအတွက် လက်ကျန်စီမံမှုစည်းမျဉ်းများကို အလိုအလျောက် ဖြည့်ပေးပါမည်။
+Turn this on when the product uses stock from another product, such as LPG 220g or LPG Viss.	LPG 220g သို့မဟုတ် LPG Viss ကဲ့သို့ အခြားကုန်ပစ္စည်း၏ လက်ကျန်ကို အသုံးပြုပါက ဤရွေးချယ်မှုကို ဖွင့်ပါ။
+Create a main stock product first	အဓိကလက်ကျန်ကုန်ပစ္စည်းကို အရင်ဖန်တီးပါ
+Choose the product whose stock this variant uses	ဤမျိုးကွဲက အသုံးပြုမည့် လက်ကျန်ကုန်ပစ္စည်းကို ရွေးပါ
+These values are stored for the inventory engine. Most products can use the automatic defaults.	ဤတန်ဖိုးများကို လက်ကျန်စီမံမှုအင်ဂျင်အတွက် သိမ်းထားပါသည်။ ကုန်ပစ္စည်းအများစုသည် အလိုအလျောက်သတ်မှတ်ချက်များကို အသုံးပြုနိုင်ပါသည်။
+What you buy/receive	သင် ဝယ်ယူ/လက်ခံသည့်အရာ
+What you sell	သင် ရောင်းချသည့်အရာ
+How incoming units become stock	ဝင်ယူနစ်များသည် လက်ကျန်အဖြစ် မည်သို့ပြောင်းမည်နည်း
+Enter the cylinders you currently have. This is the stock starting balance.	လက်ရှိသင့်ထံရှိ ဓာတ်ငွေ့အိုးအရေအတွက်ကို ထည့်ပါ။ ဤသည်မှာ စတင်လက်ကျန်ဖြစ်သည်။
+1 kg → 1 kg (fixed)	1 ကီလို → 1 ကီလို (သတ်မှတ်ထားသည်)
+220g → 0.22 kg	220g → 0.22 ကီလို
+kg (fixed for LPG)	ကီလို (LPG အတွက် သတ်မှတ်ထားသည်)
+unit, kg, piece, box	ယူနစ်၊ ကီလို၊ ခု၊ ဘူး
+10v	10 ပိဿာ
+48kg	48 ကီလို
+48 kg	48 ကီလို
+Viss (1 viss = 1.6 kg)	ပိဿာ (1 ပိဿာ = 1.6 ကီလို)
+e.g. Standard 48 kg, Small 10v	ဥပမာ - Standard 48 kg၊ Small 10v
+Voucher	ဘောင်ချာ
+Add cylinder types first.	ဓာတ်ငွေ့အိုးအမျိုးအစားကို အရင်ထည့်ပါ။
+Cylinder cycle saved	ဓာတ်ငွေ့အိုး အဝင်အထွက်ကို သိမ်းပြီးပါပြီ
+Enter an amount within the outstanding balance.	ကျန်ငွေပမာဏအတွင်းမှ ငွေပမာဏတစ်ခု ထည့်ပါ။
+Enter how much parent stock one sale unit consumes.	ရောင်းယူနစ်တစ်ခုအတွက် အဓိကလက်ကျန်မှ မည်မျှအသုံးပြုမည်ကို ထည့်ပါ။
+Incoming amount must be greater than zero.	ဝင်ကုန်ပမာဏသည် သုညထက် ကြီးရပါမည်။
+Incoming record deleted and stock reversed.	ဝင်ကုန်မှတ်တမ်းကို ဖျက်ပြီး လက်ကျန်ကို မူလအတိုင်း ပြန်လည်ပြင်ဆင်ပြီးပါပြီ။
+Incoming stock conversion must be greater than zero.	ဝင်ကုန်လက်ကျန် ပြောင်းနှုန်းသည် သုညထက် ကြီးရပါမည်။
+No products yet. Add a master product from Products, then add stock through Incoming Products.	ကုန်ပစ္စည်းမရှိသေးပါ။ Products မှ အဓိကကုန်ပစ္စည်းတစ်ခုထည့်ပြီး Incoming Products မှ လက်ကျန်ထည့်ပါ။
+Product created.	ကုန်ပစ္စည်း ဖန်တီးပြီးပါပြီ။
+Product deleted.	ကုန်ပစ္စည်း ဖျက်ပြီးပါပြီ။
+Product updated.	ကုန်ပစ္စည်း ပြင်ဆင်ပြီးပါပြီ။
+Select the main stock product for this selling variant.	ဤရောင်းရန်မျိုးကွဲအတွက် အဓိကလက်ကျန်ကုန်ပစ္စည်းကို ရွေးပါ။
+Stock used per direct sale unit must be greater than zero.	တိုက်ရိုက်ရောင်းယူနစ်တစ်ခုအတွက် အသုံးပြုသည့် လက်ကျန်သည် သုညထက် ကြီးရပါမည်။
+Period: 	ကာလ: 
+Transactions: 	အရောင်းအဝယ်: 
+Sales • 	အရောင်း • 
+Yearly export uses a compact monthly summary to avoid excessive memory use on large transaction histories.	အရောင်းအဝယ်မှတ်တမ်းများ များပြားသောအခါ မှတ်ဉာဏ်အသုံးပြုမှုလျှော့ချရန် နှစ်စဉ်ထုတ်ယူမှုတွင် လစဉ်အနှစ်ချုပ်ပုံစံကို အသုံးပြုထားပါသည်။
+Save Yearly Sales Report	နှစ်စဉ်အရောင်းအစီရင်ခံစာ သိမ်းရန်
+Yearly Sales Summary - 	နှစ်စဉ်အရောင်းအနှစ်ချုပ် - 
+Name: 	အမည်: 
+Items: 	ပစ္စည်းများ: 
+Total: 	စုစုပေါင်း: 
+Date: 	ရက်စွဲ: 
+Paid: 	ပေးပြီး: 
+Profit 	အမြတ် 
+Report	အစီရင်ခံစာ
+Month	လ
+Save a complete snapshot of your data as a JSON backup. This is the recommended method for large backups because it does not depend on clipboard limits.	သင့်ဒေတာအားလုံးကို JSON အရန်ဒေတာအဖြစ် သိမ်းပါ။ Clipboard ကန့်သတ်ချက်များနှင့် မသက်ဆိုင်သောကြောင့် ဒေတာအများအပြားအတွက် ဤနည်းလမ်းကို အကြံပြုပါသည်။
+For large backups, import the original .json/.txt file directly. This bypasses clipboard and text-box size limits. You can still paste smaller backups below.	ဒေတာအများအပြားအတွက် မူရင်း .json/.txt ဖိုင်ကို တိုက်ရိုက်ထည့်သွင်းပါ။ ထိုနည်းဖြင့် Clipboard နှင့် စာသားအကွက်အရွယ်အစား ကန့်သတ်ချက်များကို ကျော်လွှားနိုင်ပါသည်။ အသေးစားအရန်ဒေတာများကို အောက်တွင် ဆက်လက်ကူးထည့်နိုင်ပါသည်။
+Backup copied	အရန်ဒေတာ ကူးယူပြီးပါပြီ
+Backup file saved	အရန်ဒေတာဖိုင် သိမ်းပြီးပါပြီ
+Pay Yan comes from unpaid IncomingSupply records. Record the supplier purchase first; it will appear here automatically.	ပေးရန်စာရင်းသည် မပေးရသေးသော ဝင်ကုန်မှတ်တမ်းများမှ အလိုအလျောက် ရရှိပါသည်။ ပစ္စည်းပေးသွင်းသူထံမှ ဝယ်ယူမှုကို အရင်မှတ်တမ်းတင်ပါ။ ထို့နောက် ဤနေရာတွင် အလိုအလျောက် ပေါ်လာပါမည်။
+Ya Yan comes from unpaid Sale records. Record the sale and payment first; it will appear here automatically.	ရရန်စာရင်းသည် မရသေးသော အရောင်းမှတ်တမ်းများမှ အလိုအလျောက် ရရှိပါသည်။ အရောင်းနှင့် ငွေပေးချေမှုကို အရင်မှတ်တမ်းတင်ပါ။ ထို့နောက် ဤနေရာတွင် အလိုအလျောက် ပေါ်လာပါမည်။
+Pay Yan entries come from IncomingSupply. Update the purchase payment instead.	ပေးရန်စာရင်းသည် ဝင်ကုန်မှတ်တမ်းများမှ ရရှိပါသည်။ ဝယ်ယူမှု၏ ပေးချေမှုကိုသာ ပြင်ဆင်ပါ။
+Ya Yan entries come from Sale. Update the sale payment instead.	ရရန်စာရင်းသည် အရောင်းမှတ်တမ်းများမှ ရရှိပါသည်။ အရောင်း၏ ပေးချေမှုကိုသာ ပြင်ဆင်ပါ။
+There is no text backup in the clipboard.	Clipboard ထဲတွင် အရန်စာသားဒေတာ မရှိပါ။
+Backup copied (${json.length} characters). For large backups, save it as a file instead of using the clipboard.	အရန်ဒေတာကို ကူးယူပြီးပါပြီ။ ဒေတာအများအပြားအတွက် Clipboard အစား ဖိုင်အဖြစ် သိမ်းဆည်းပါ။
+Backup file saved (${json.length} characters).	အရန်ဒေတာဖိုင်ကို သိမ်းပြီးပါပြီ။
+Could not save the backup file: 	အရန်ဒေတာဖိုင် သိမ်း၍ မရပါ: 
+Could not capture the voucher image.	ဘောင်ချာပုံကို ဖမ်းယူ၍ မရပါ။
+Sharing isn't supported on this device — the voucher image was saved instead.	ဤစက်တွင် မျှဝေမှုကို မပံ့ပိုးပါ။ ဘောင်ချာပုံကို အစား သိမ်းဆည်းထားပါသည်။
+Voucher image saved to your gallery	ဘောင်ချာပုံကို Gallery ထဲသို့ သိမ်းပြီးပါပြီ
+Voucher image saved	ဘောင်ချာပုံကို သိမ်းပြီးပါပြီ
+The backup is 	အရန်ဒေတာသည် 
+This backup is 	ဤအရန်ဒေတာသည် 
+Importing it will overwrite everything currently stored on this device.	၎င်းကို ထည့်သွင်းပါက ဤစက်တွင် လက်ရှိသိမ်းထားသမျှ အားလုံးကို အစားထိုးသွားပါမည်။
+This deletes every product, person, voucher, and ledger entry on this device. This cannot be undone.	ဤလုပ်ဆောင်ချက်သည် ဤစက်ရှိ ကုန်ပစ္စည်း၊ လူစာရင်း၊ ဘောင်ချာနှင့် စာရင်းမှတ်တမ်းအားလုံးကို ဖျက်ပစ်ပါမည်။ ပြန်လည်ပြင်ဆင်၍ မရပါ။
+Add suppliers from the Suppliers page to use named supplier records in incoming stock.	ဝင်ကုန်လက်ကျန်တွင် အမည်ပါသော ပစ္စည်းပေးသွင်းသူမှတ်တမ်းများကို အသုံးပြုရန် Suppliers စာမျက်နှာမှ ပစ္စည်းပေးသွင်းသူများကို ထည့်ပါ။
+Create the LPG Kg main stock product first. LPG 220g and LPG Viss are selling variants and cannot receive stock directly.	LPG Kg အဓိကလက်ကျန်ကုန်ပစ္စည်းကို အရင်ဖန်တီးပါ။ LPG 220g နှင့် LPG Viss သည် ရောင်းရန်မျိုးကွဲများဖြစ်သောကြောင့် လက်ကျန်ကို တိုက်ရိုက်ထည့်၍ မရပါ။
+Current incoming cost per kg: MMK 	လက်ရှိ ဝင်ကုန်တစ်ကီလိုကုန်ကျစရိတ်: MMK 
+Current cost per 	လက်ရှိ ကုန်ကျစရိတ် / 
+Enter LPG quantity directly in kg. No cylinder input is used.	LPG ပမာဏကို ကီလိုဖြင့် တိုက်ရိုက်ထည့်ပါ။ ဓာတ်ငွေ့အိုးအရေအတွက် ထည့်သွင်းမှုကို အသုံးမပြုပါ။
+Select an existing main stock product	ရှိပြီးသား အဓိကလက်ကျန်ကုန်ပစ္စည်းကို ရွေးပါ
+Customer sale	ဖောက်သည်အရောင်း
+Supplier payment	ပစ္စည်းပေးသွင်းသူထံ ပေးချေမှု
+Customer payment	ဖောက်သည်ထံမှ ရရှိသည့်ငွေ
+Initial customer payment	ဖောက်သည်၏ အစပေးချေမှု
+Initial supplier payment	ပစ္စည်းပေးသွင်းသူထံ အစပေးချေမှု
+Supplier payment adjustment	ပစ္စည်းပေးသွင်းသူပေးချေမှု ပြင်ဆင်ချက်
+Customer payment adjustment	ဖောက်သည်ပေးချေမှု ပြင်ဆင်ချက်
+Not enough stock.	လက်ကျန်မလုံလောက်ပါ။
+Parent stock missing	အဓိကလက်ကျန် မတွေ့ပါ
+Voucher {voucher} • {date}	ဘောင်ချာ {voucher} • {date}
+Paid {paid} / {total} • Balance {balance}	ပေးပြီး {paid} / {total} • လက်ကျန် {balance}
+Payment date {date}	ပေးချေသည့်ရက် {date}
+Pay {supplier}	{supplier} ထံ ပေးရန်
+Receive from {customer}	{customer} ထံမှ လက်ခံရန်
+Outstanding: {balance}	ကျန်ငွေ: {balance}
+Balance {balance}	လက်ကျန် {balance}
+Paid {paid}	ပေးပြီး {paid}
+Received {amount}	လက်ခံရရှိ {amount}
+Adjustment {amount}	ပြင်ဆင်ငွေ {amount}
+Product {name} deleted.	ကုန်ပစ္စည်း {name} ကို ဖျက်ပြီးပါပြီ။
+Product {name} created.	ကုန်ပစ္စည်း {name} ကို ဖန်တီးပြီးပါပြီ။
+Set {type} quantity	{type} အရေအတွက် သတ်မှတ်ရန်
+Delete {type} History	{type} မှတ်တမ်းဖျက်ရန်
+Given {given} • Received {received}	ပေးလိုက်သည် {given} • ရရှိသည် {received}
+Cycle date: {date}	အဝင်အထွက်ရက်: {date}
+Active {category}: {qty}	လက်ရှိ {category}: {qty}
+product	ကုန်ပစ္စည်း
+products	ကုန်ပစ္စည်းများ
+1 {input} → {output} {stockUnit}	1 {input} → {output} {stockUnit}
+Active {category}: 0	လက်ရှိ {category}: 0
+Active {category}: {qty} with customer	လက်ရှိ {category}: {qty} ဖောက်သည်ထံတွင်
+Active {category}: {qty} with us	လက်ရှိ {category}: {qty} ကျွန်ုပ်တို့ထံတွင်
+Add a Cylinder Type first	ဓာတ်ငွေ့အိုးအမျိုးအစားကို အရင်ထည့်ပါ
+Backup copied ({count} characters). For large backups, save it as a file instead of using the clipboard.	အရန်ဒေတာကို ကူးယူပြီးပါပြီ ({count} စာလုံး)။ ဒေတာအများအပြားအတွက် Clipboard အစား ဖိုင်အဖြစ် သိမ်းဆည်းပါ။
+Backup file saved ({count} characters).	အရန်ဒေတာဖိုင်ကို သိမ်းပြီးပါပြီ ({count} စာလုံး)။
+Balance: MMK {amount}	လက်ကျန်: MMK {amount}
+Current cost per {unit}: MMK {amount}	လက်ရှိ {unit} တစ်ခုလျှင် ကုန်ကျစရိတ်: MMK {amount}
+Current stock: {stock} {unit}	လက်ရှိလက်ကျန်: {stock} {unit}
+Customer owes us {qty}	ဖောက်သည်က ကျွန်ုပ်တို့ကို ပေးရန်ရှိသည် {qty}
+Customer units with us: {qty}	ဖောက်သည်ပစ္စည်း အရေအတွက် ကျွန်ုပ်တို့ထံရှိသည်: {qty}
+Customer: {customer}	ဖောက်သည်: {customer}
+Date: {date}	ရက်စွဲ: {date}
+Delete "{name}" ({kind})?
+
+Incoming records: {incoming}
+Saved sale items: {sales}
+
+Parent stock products cannot be deleted while selling variants depend on them.	"{name}" ({kind}) ကို ဖျက်မည်လား?
+
+ဝင်ကုန်မှတ်တမ်း: {incoming}
+သိမ်းထားသော အရောင်းပစ္စည်းများ: {sales}
+
+ရောင်းရန်မျိုးကွဲများက မှီခိုနေသော အဓိကလက်ကျန်ကုန်ပစ္စည်းကို ဖျက်၍မရပါ။
+Delete "{name}"? Existing cylinder-cycle records will not be deleted.	"{name}" ကို ဖျက်မည်လား? ရှိပြီးသား ဓာတ်ငွေ့အိုး အဝင်အထွက်မှတ်တမ်းများကို ဖျက်မည်မဟုတ်ပါ။
+Grand Total: MMK {amount}	စုစုပေါင်း: MMK {amount}
+In our possession: {qty}	ကျွန်ုပ်တို့ထံရှိသည်: {qty}
+Incoming date: {date}	ဝင်ကုန်ရက်: {date}
+Incoming quantity ({unit})	ဝင်ကုန်အရေအတွက် ({unit})
+LPG incoming: 1 kg → 1 kg (kg-only input)	LPG ဝင်ကုန်: 1 ကီလို → 1 ကီလို (ကီလိုဖြင့်သာ ထည့်သွင်းသည်)
+Missing	မတွေ့ပါ
+No customers added yet	ဖောက်သည် မထည့်ရသေးပါ
+Only cylinder types with an unsettled customer balance appear here.	ဖောက်သည်နှင့် မရှင်းရသေးသော ဓာတ်ငွေ့အိုးလက်ကျန်ရှိသည့် အမျိုးအစားများသာ ဤနေရာတွင် ပေါ်ပါမည်။
+Out with customers: {qty}	ဖောက်သည်များထံ ရှိနေသော အရေအတွက်: {qty}
+Paid: MMK {amount}	ပေးပြီး: MMK {amount}
+Period: {period}. Total Profit comes from the saved SaleItem profit. Expense here means manually recorded Income/Expense expenses; supplier purchase cost is already used when sale profit is calculated.	ကာလ: {period}။ စုစုပေါင်းအမြတ်သည် သိမ်းထားသော အရောင်းပစ္စည်းအမြတ်မှ ရရှိပါသည်။ အသုံးစရိတ်မှာ Income/Expense တွင် ကိုယ်တိုင်မှတ်တမ်းတင်ထားသော အသုံးစရိတ်ဖြစ်ပြီး ပစ္စည်းပေးသွင်းသူထံမှ ဝယ်ယူစရိတ်ကို အရောင်းအမြတ်တွက်ချက်ရာတွင် ထည့်သွင်းထားပြီးဖြစ်ပါသည်။
+Prepared For: {customer}	အတွက် ပြင်ဆင်ထားသည်: {customer}
+Select customer	ဖောက်သည်ကို ရွေးပါ
+Select cylinder type	ဓာတ်ငွေ့အိုးအမျိုးအစားကို ရွေးပါ
+Selling variant • Parent: {parent} • Sale unit: {unit}	ရောင်းရန်မျိုးကွဲ • အဓိကကုန်ပစ္စည်း: {parent} • ရောင်းယူနစ်: {unit}
+Showing {period}	{period} ကို ပြသနေသည်
+Stock added: {qty} kg	ထပ်တိုးလက်ကျန်: {qty} ကီလို
+Stock added: {qty} {unit}	ထပ်တိုးလက်ကျန်: {qty} {unit}
+Stock: {stock} {unit}	လက်ကျန်: {stock} {unit}
+Stock: {stock} {unit} • Incoming: {incoming}	လက်ကျန်: {stock} {unit} • ဝင်ကုန်: {incoming}
+The backup is {count} characters long.	အရန်ဒေတာသည် စာလုံး {count} ရှိပါသည်။
+Total: MMK {amount}	စုစုပေါင်း: MMK {amount}
+Voucher for {customer}	{customer} အတွက် ဘောင်ချာ
+We owe customer {qty}	ကျွန်ုပ်တို့က ဖောက်သည်ကို ပေးရန်ရှိသည် {qty}
+Your current physical quantity. Cycle entries update this automatically.	လက်ရှိ သင့်ထံရှိ အမှန်တကယ်အရေအတွက်ဖြစ်ပါသည်။ Cycle မှတ်တမ်းများသိမ်းသည့်အခါ ဤပမာဏကို အလိုအလျောက် ပြင်ဆင်ပါသည်။
+{category} • In our possession: {qty}	{category} • ကျွန်ုပ်တို့ထံရှိသည်: {qty}
+{count} active customer(s)	ဖောက်သည်လက်ရှိ အရေအတွက် {count}
+{count} {label}	{count} {label}
+{date} • {count} item(s) • {status}	{date} • {count} ခု • {status}
+{qty} with customer • Customer owes us	{qty} ဖောက်သည်ထံတွင် • ဖောက်သည်က ကျွန်ုပ်တို့ကို ပေးရန်ရှိသည်
+{qty} with us • We owe customer	{qty} ကျွန်ုပ်တို့ထံတွင် • ကျွန်ုပ်တို့က ဖောက်သည်ကို ပေးရန်ရှိသည်
+
+# Additional UI templates/errors and dynamic labels.
+English	English
+Burmese	မြန်မာ
+Language	ဘာသာစကား
+Switch to Burmese	မြန်မာဘာသာသို့ ပြောင်းရန်
+Switch to English	အင်္ဂလိပ်ဘာသာသို့ ပြောင်းရန်
+Kyal Sin Lay Energy & Tech	Kyal Sin Lay Energy & Tech
+Total Profit	စုစုပေါင်းအမြတ်
+Net Profit	အသားတင်အမြတ်
+Total to Pay: {amount}	ပေးရန်စုစုပေါင်း: {amount}
+Total to Receive: {amount}	ရရန်စုစုပေါင်း: {amount}
+{supplier} • {product}	{supplier} • {product}
+{customer} • Voucher {voucher}	{customer} • ဘောင်ချာ {voucher}
+Profit {amount}	အမြတ် {amount}
+Voucher {voucher} • {date} • {count} item(s)	ဘောင်ချာ {voucher} • {date} • {count} ခု
+No {category}s yet. Tap + to add one.	{category} မရှိသေးပါ။ + ကိုနှိပ်၍ ထည့်ပါ။
+Add {category}	{category} ထည့်ရန်
+{name} added as {category}	{name} ကို {category} အဖြစ် ထည့်ပြီးပါပြီ။
+Cost per {unit} for this incoming	ဤဝင်ကုန်အတွက် {unit} တစ်ခုလျှင် ကုန်ကျစရိတ်
+Balance MMK {balance}	လက်ကျန် MMK {balance}
+Current incoming cost per kg: MMK {amount}	လက်ရှိ ဝင်ကုန်တစ်ကီလို ကုန်ကျစရိတ်: MMK {amount}
+Current cost per {unit}	လက်ရှိ {unit} တစ်ခုလျှင် ကုန်ကျစရိတ်
+Delete the voucher for "{customer}"? Stock sold on this voucher will be returned.	"{customer}" အတွက် ဘောင်ချာကို ဖျက်မည်လား? ဤဘောင်ချာတွင် ရောင်းထားသော လက်ကျန်ကို ပြန်ထည့်ပေးပါမည်။
+Amount paid (total {amount})	ပေးပြီးငွေ (စုစုပေါင်း {amount})
+Date {date}	ရက်စွဲ {date}
+Cylinder type "{name}" added.	ဓာတ်ငွေ့အိုးအမျိုးအစား "{name}" ကို ထည့်ပြီးပါပြီ။
+{type} History	{type} မှတ်တမ်း
+There is no history to delete for {type}.	{type} အတွက် ဖျက်ရန် မှတ်တမ်းမရှိပါ။
+Transactions • {period}	အရောင်းအဝယ် • {period}
+Sales • {period}	အရောင်း • {period}
+Yearly Sales Summary - {year}	နှစ်စဉ်အရောင်းအနှစ်ချုပ် - {year}
+Transactions: {count}	အရောင်းအဝယ်: {count}
+Sales Report - {period}	အရောင်းအစီရင်ခံစာ - {period}
+Generated: {date}	ဖန်တီးသည့်ရက်: {date}
+Page {page}	စာမျက်နှာ {page}
+Customer • Voucher {voucher}	ဖောက်သည် • ဘောင်ချာ {voucher}
+{label} {amount}	{label} {amount}
+Delete "{name}" ({kind})?\n\nIncoming records: {incoming}\nSaved sale items: {sales}\n\nParent stock products cannot be deleted while selling variants depend on them.	"{name}" ({kind}) ကို ဖျက်မည်လား?\n\nဝင်ကုန်မှတ်တမ်း: {incoming}\nသိမ်းထားသော အရောင်းပစ္စည်းများ: {sales}\n\nရောင်းရန်မျိုးကွဲများက မှီခိုနေသော အဓိကလက်ကျန်ကုန်ပစ္စည်းကို ဖျက်၍မရပါ။
+This will also delete its linked Incoming Products records and supplier payment records. Saved sales using this product are protected and will block deletion.	ဤကုန်ပစ္စည်းနှင့် ချိတ်ဆက်ထားသော ဝင်ကုန်မှတ်တမ်းများနှင့် ပစ္စည်းပေးသွင်းသူထံ ပေးချေမှုမှတ်တမ်းများကိုလည်း ဖျက်ပါမည်။ သိမ်းထားသော အရောင်းမှတ်တမ်းများကြောင့် ဖျက်ခြင်းကို တားဆီးနိုင်ပါသည်။
+Remove product {name}?	ကုန်ပစ္စည်း {name} ကို ဖယ်ရှားမည်လား?
+This will reverse the converted stock amount and remove its linked supplier payment/payable record.	ပြောင်းလဲတွက်ချက်ထားသော လက်ကျန်ပမာဏကို မူလအတိုင်း ပြန်ပြင်ပြီး ချိတ်ဆက်ထားသော ပစ္စည်းပေးသွင်းသူထံ ပေးချေမှု/ပေးရန်ရှိငွေမှတ်တမ်းကို ဖယ်ရှားပါမည်။
+{product}: added {stock} {stockUnit} from {quantity} {inputUnit}.	{product}: {quantity} {inputUnit} မှ {stock} {stockUnit} ကို ထည့်သွင်းပြီးပါပြီ။
+{qty} {inputUnit} → {stock} {stockUnit} • MMK {cost} per {unit}{supplier} • {date}	{qty} {inputUnit} → {stock} {stockUnit} • တစ်{unit}လျှင် MMK {cost}{supplier} • {date}
+{customer} • {type}\n\n{given}\n{received}\n{date}	{customer} • {type}\n\n{given}\n{received}\n{date}
+Given: {qty}	ပေးလိုက်သည်: {qty}
+Received: {qty}	ရရှိသည်: {qty}
+Quantity ({unit})	အရေအတွက် ({unit})
+This does not look like a POS backup. No recognized data sections were found.	ဤဖိုင်သည် POS အရန်ဒေတာဖိုင်ပုံစံ မဟုတ်ပါ။ အသိအမှတ်ပြုထားသော ဒေတာအပိုင်း မတွေ့ပါ။
+SharedPreferences rejected the database write.	ဒေတာဘေ့စ်သိမ်းဆည်းမှုကို စက်၏ SharedPreferences က လက်မခံပါ။
+Imported data could not be saved.	ထည့်သွင်းထားသော ဒေတာကို မသိမ်းနိုင်ပါ။
+Select the parent stock product for this selling variant.	ဤရောင်းရန်မျိုးကွဲအတွက် အဓိကလက်ကျန်ကုန်ပစ္စည်းကို ရွေးပါ။
+The selected parent stock product was not found.	ရွေးထားသော အဓိကလက်ကျန်ကုန်ပစ္စည်းကို မတွေ့ပါ။
+A product cannot subtract its own stock.	ကုန်ပစ္စည်းတစ်ခုသည် မိမိ၏ကိုယ်ပိုင်လက်ကျန်ကို မဖြတ်ယူနိုင်ပါ။
+A selling variant cannot use another selling variant as its parent. Choose the main stock product.	ရောင်းရန်မျိုးကွဲတစ်ခုသည် အခြားရောင်းရန်မျိုးကွဲကို အဓိကကုန်ပစ္စည်းအဖြစ် အသုံးမပြုနိုင်ပါ။ အဓိကလက်ကျန်ကုန်ပစ္စည်းကို ရွေးပါ။
+Stock used per sale unit must be greater than zero.	ရောင်းယူနစ်တစ်ခုအတွက် အသုံးပြုသည့် လက်ကျန်သည် သုညထက် ကြီးရပါမည်။
+A product with the same name, type, and sub type already exists.	အမည်၊ အမျိုးအစားနှင့် အခွဲအမျိုးအစား တူညီသော ကုန်ပစ္စည်း ရှိပြီးသားဖြစ်ပါသည်။
+Product could not be saved. Your previous saved data was kept.	ကုန်ပစ္စည်းကို မသိမ်းနိုင်ပါ။ ယခင်သိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+Product could not be updated. Your previous saved data was kept.	ကုန်ပစ္စည်းကို ပြင်ဆင်၍ မသိမ်းနိုင်ပါ။ ယခင်သိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+Select an existing main stock product before recording incoming stock.	ဝင်ကုန်လက်ကျန် မမှတ်တမ်းတင်မီ ရှိပြီးသား အဓိကလက်ကျန်ကုန်ပစ္စည်းကို ရွေးပါ။
+This product is a selling variant. Receive stock into its parent product instead.	ဤကုန်ပစ္စည်းသည် ရောင်းရန်မျိုးကွဲဖြစ်ပါသည်။ ၎င်း၏ အဓိကကုန်ပစ္စည်းထဲသို့ လက်ကျန်ထည့်ပါ။
+Incoming product could not be saved. Your previous saved data was kept.	ဝင်ကုန်ပစ္စည်းကို မသိမ်းနိုင်ပါ။ ယခင်သိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+This product is a parent stock product for {count} selling variant(s). Delete or reassign those variants first.	ဤကုန်ပစ္စည်းသည် ရောင်းရန်မျိုးကွဲ {count} ခု၏ အဓိကလက်ကျန်ကုန်ပစ္စည်း ဖြစ်ပါသည်။ ထိုမျိုးကွဲများကို အရင်ဖျက်ပါ သို့မဟုတ် အဓိကကုန်ပစ္စည်းပြောင်းသတ်မှတ်ပါ။
+This product is used by saved sales and cannot be deleted safely. Delete the incorrect Sale record first.	ဤကုန်ပစ္စည်းကို သိမ်းထားသော အရောင်းမှတ်တမ်းများတွင် အသုံးပြုထားသောကြောင့် လုံခြုံစွာ ဖျက်၍မရပါ။ မှားယွင်းသော အရောင်းမှတ်တမ်းကို အရင်ဖျက်ပါ။
+The selected product is missing its parent stock product.	ရွေးထားသော ကုန်ပစ္စည်းတွင် အဓိကလက်ကျန်ကုန်ပစ္စည်း မတွေ့ပါ။
+This incoming record cannot be deleted safely because some of the received stock has already been sold or otherwise consumed.	ရရှိထားသော လက်ကျန်အချို့ကို ရောင်းချပြီး သို့မဟုတ် အသုံးပြုပြီးဖြစ်သောကြောင့် ဤဝင်ကုန်မှတ်တမ်းကို လုံခြုံစွာ ဖျက်၍မရပါ။
+Incoming product deletion could not be saved. Your previous saved data was kept.	ဝင်ကုန်ပစ္စည်း ဖျက်ခြင်းကို မသိမ်းနိုင်ပါ။ ယခင်သိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+A sale must contain at least one item.	အရောင်းတစ်ခုတွင် အနည်းဆုံး ပစ္စည်းတစ်ခု ပါရပါမည်။
+Product "{product}" could not be matched to the product catalog.	ကုန်ပစ္စည်း "{product}" ကို ကုန်ပစ္စည်းစာရင်းနှင့် ကိုက်ညီစွာ မတွေ့နိုင်ပါ။
+Product "{product}" is linked to a missing parent stock product.	ကုန်ပစ္စည်း "{product}" သည် မတွေ့ရှိသော အဓိကလက်ကျန်ကုန်ပစ္စည်းနှင့် ချိတ်ဆက်ထားပါသည်။
+The stock conversion for "{product}" is invalid.	"{product}" ၏ လက်ကျန်ပြောင်းလဲနှုန်းသည် မမှန်ကန်ပါ။
+Not enough stock for "{product}". Available: {available} {unit}, required: {required} {unit}.	"{product}" အတွက် လက်ကျန်မလုံလောက်ပါ။ ရရှိနိုင်သည်: {available} {unit}၊ လိုအပ်သည်: {required} {unit}။
+Cylinder stock cannot be negative. Enter 0 or more.	ဓာတ်ငွေ့အိုးလက်ကျန်သည် အနုတ်မဖြစ်ရပါ။ ၀ သို့မဟုတ် ထို့ထက်များသော ပမာဏကို ထည့်ပါ။
+Cylinder type name cannot be empty.	ဓာတ်ငွေ့အိုးအမျိုးအစားအမည် မဖြစ်မနေထည့်ရပါမည်။
+A cylinder type with this name already exists in this category.	ဤအမျိုးအစားတွင် ဤအမည်ရှိသော ဓာတ်ငွေ့အိုးအမျိုးအစား ရှိပြီးသားဖြစ်ပါသည်။
+Cylinder type could not be saved. Your previous saved data was kept.	ဓာတ်ငွေ့အိုးအမျိုးအစားကို မသိမ်းနိုင်ပါ။ ယခင်သိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+This cylinder type is already used by Cylinder Cycles and cannot be deleted. Delete those cycle records first.	ဤဓာတ်ငွေ့အိုးအမျိုးအစားကို Cylinder Cycles တွင် အသုံးပြုထားပြီးဖြစ်သောကြောင့် ဖျက်၍မရပါ။ ထိုအဝင်အထွက်မှတ်တမ်းများကို အရင်ဖျက်ပါ။
+Cylinder type deletion could not be saved. Your previous saved data was kept.	ဓာတ်ငွေ့အိုးအမျိုးအစား ဖျက်ခြင်းကို မသိမ်းနိုင်ပါ။ ယခင်သိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+Cylinder type not found.	ဓာတ်ငွေ့အိုးအမျိုးအစား မတွေ့ပါ။
+Cylinder quantity could not be saved. Your previous saved data was kept.	ဓာတ်ငွေ့အိုးအရေအတွက်ကို မသိမ်းနိုင်ပါ။ ယခင်သိမ်းထားသော ဒေတာကို ဆက်လက်ထိန်းသိမ်းထားပါသည်။
+Cylinder quantities cannot be negative.	ဓာတ်ငွေ့အိုးအရေအတွက်သည် အနုတ်မဖြစ်ရပါ။
+Myanmar PDF font is missing.	Myanmar PDF ဖောင့် မတွေ့ပါ။
+PDF generation failed: {error}	PDF ဖန်တီးမှု မအောင်မြင်ပါ: {error}
+Cylinder stock is entered and adjusted on the Cylinder Types page.	ဓာတ်ငွေ့အိုးလက်ကျန်ကို Cylinder Types စာမျက်နှာတွင် ထည့်သွင်းပြီး ပြင်ဆင်ပါသည်။
+Quantity for {product} must be greater than zero.	{product} အတွက် အရေအတွက်သည် သုညထက် ကြီးရပါမည်။
+Could not save data: {error}	ဒေတာသိမ်းဆည်း၍ မရပါ: {error}
+Stored data could not be loaded safely: {error}	သိမ်းထားသောဒေတာကို လုံခြုံစွာ ဖတ်မရပါ: {error}
+Another product already has the same name, type, and sub type.	အမည်၊ အမျိုးအစားနှင့် အခွဲအမျိုးအစား တူညီသော အခြားကုန်ပစ္စည်း ရှိပြီးသားဖြစ်ပါသည်။
+
+Remove product {name}?\n\n{details}	ကုန်ပစ္စည်း {name} ကို ဖယ်ရှားမည်လား?\n\n{details}
+{given} • {received}\n{date} • {direction}	{given} • {received}\n{date} • {direction}
+{given} • {received} • {date}	{given} • {received} • {date}
+{product} • {qty} {inputUnit} • {adds} {stockUnit}\n\n{details}	{product} • {qty} {inputUnit} • ထပ်တိုး {adds} {stockUnit}\n\n{details}
+Given {qty}	ပေးလိုက်သည် {qty}
+Received {qty}	ရရှိသည် {qty}
+{given} • {received}	{given} • {received}
+
+# Additional UI keys
+Insufficient {type} stock. Available: {available}, trying to give: {given}.	ကျန်နေသော {type} ပမာဏ မလုံလောက်ပါ။ ရရှိနိုင်သည်: {available}၊ ပေးရန်ကြိုးစားသည်: {given}။
+Not enough stock. {product} has only {available} {unit} available for this voucher.	ဤဘောင်ချာအတွက် {product} တွင် {available} {unit} သာ လက်ကျန်ရှိပါသည်။
+{label}: MMK {amount}	{label}: MMK {amount}
+
+# Additional UI keys
+Sale {voucher}	အရောင်း {voucher}
+Purchase {product}	ဝယ်ယူမှု {product}
+{product} • Qty {qty} • Total {total} • Paid {paid}	{product} • အရေအတွက် {qty} • စုစုပေါင်း {total} • ပေးပြီး {paid}

@@ -1,0 +1,64 @@
+name: Build Desktop Applications
+
+on:
+  push:
+    branches: [ main, master ] # Triggers build on pushes to these branches
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      # Matrix runs all three builds in parallel
+      matrix:
+        target: [windows, macos, linux]
+        include:
+          - target: windows
+            os: windows-latest
+          - target: macos
+            os: macos-latest
+          - target: linux
+            os: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Linux requires specific system dependencies to build Flutter desktop
+      - name: Install Linux Dependencies
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Set up Java (Required for Flutter framework tools)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true # Caches Flutter build outputs to make future builds faster
+
+      - name: Install project dependencies
+        run: flutter pub get
+
+      # Build step dynamically changes based on the matrix target
+      - name: Build Desktop Release
+        run: flutter build ${{ matrix.target }} --release
+
+      # Uploads the compiled files so you can download them from GitHub
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-release
+          path: |
+            build/windows/x64/runner/Release/
+            build/macos/Build/Products/Release/
+            build/linux/x64/release/bundle/

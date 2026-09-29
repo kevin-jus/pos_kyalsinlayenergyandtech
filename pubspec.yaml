@@ -1,0 +1,61 @@
+name: pos_kyalsinlayenergyandtech
+description: "POS System for Kyal Sin Lay Energy and Tech"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  cross_file: ^0.3.5+5
+  file_picker: ^13.1.0
+  flutter:
+    sdk: flutter
+  gal: ^2.3.3
+  path_provider: ^2.1.6
+  pdf: ^3.13.1
+  pdf_text_shaper: ^1.1.0
+  printing: ^5.15.1
+  qr_flutter: ^4.1.0
+  share_plus: ^13.3.0
+  shared_preferences: ^2.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/fonts/NotoSansMyanmar-Regular.ttf
+    - assets/fonts/NotoSansMyanmar-Bold.ttf
+    - assets/translations/en_my.txt
+
+  fonts:
+    - family: Noto Sans Myanmar
+      fonts:
+        - asset: assets/fonts/NotoSansMyanmar-Regular.ttf
+        - asset: assets/fonts/NotoSansMyanmar-Bold.ttf
+          weight: 700
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/images/logo.png"
+
+  android: true
+  ios: true
+  web: false
+
+  android_12:
+    color: "#FFFFFF"
+    image: "assets/images/logo.png"
