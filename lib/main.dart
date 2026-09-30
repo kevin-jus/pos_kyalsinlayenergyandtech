@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -7,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'pos_database.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -16,6 +18,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:gal/gal.dart';
 import 'ui_translation.dart';
+import 'wifi_sync.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
@@ -24,6 +27,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await UiTranslation.load();
   await AppData.instance.load();
+  await AppData.instance.wifiSync.initialize();
   runApp(const MyApp());
 }
 
@@ -649,10 +653,20 @@ class CylinderCycle {
 // =====================================================================
 
 class AppData {
+  late final WifiSyncManager wifiSync;
+
   AppData._internal() {
     _ensureDefaultCylinderTypes();
+    wifiSync = WifiSyncManager(
+      readLocalSnapshot: () async => _snapshot(),
+      applyRemoteSnapshot: replaceSnapshotFromSync,
+      getLocalUserRevision: () async => _localUserRevision,
+    );
   }
   static final AppData instance = AppData._internal();
+
+  int _localUserRevision = 0;
+  int get localUserRevision => _localUserRevision;
 
   static int _counter = 0;
   static String newId() {
@@ -704,7 +718,7 @@ class AppData {
   bool _loaded = false;
   String? loadError;
   String? lastSaveError;
-  String _lastKnownGoodJson = '{}';
+  final PosDatabase _database = PosDatabase.instance;
   Future<void> _saveChain = Future<void>.value();
 
   List<Sale> get vouchers => sales;
@@ -757,6 +771,22 @@ class AppData {
     cylinderCycles
       ..clear()
       ..addAll(source.cylinderCycles);
+  }
+
+  /// Public bridge used by the Wi-Fi synchronization layer. SQLite is updated
+  /// first; the in-memory model changes only after the durable write succeeds.
+  Map<String, dynamic> snapshotForSync() => _snapshot();
+
+  Future<void> replaceSnapshotFromSync(Map<String, dynamic> snapshot) async {
+    final parsed = _parseIntoTemporary(jsonEncode(snapshot));
+    final operation = _saveChain.then((_) async {
+      final normalized = parsed._snapshot();
+      await _database.replaceSnapshot(normalized);
+      _replaceStateFrom(parsed);
+    });
+
+    _saveChain = operation.then<void>((_) {}, onError: (_) {});
+    await operation;
   }
 
   AppData _parseIntoTemporary(String raw) {
@@ -1161,17 +1191,71 @@ class AppData {
   String cylinderTypeNameFor(CylinderCycle cycle) =>
       cylinderTypeById(cycle.cylinderTypeId)?.name ?? cycle.product;
 
+  Future<void> _restoreFromDatabase() async {
+    final snapshot = await _database.readSnapshot();
+    _restoreFrom(snapshot);
+  }
+
+  Future<bool> _tryDatabaseWrite(Future<void> Function() write) {
+    final operation = _saveChain.then((_) async {
+      try {
+        await write();
+        lastSaveError = null;
+        _localUserRevision++;
+        wifiSync.notifyLocalDataChanged();
+        return true;
+      } catch (e, stackTrace) {
+        lastSaveError = 'Could not save data: $e';
+        debugPrint(lastSaveError);
+        debugPrintStack(stackTrace: stackTrace);
+
+        // The database transaction is atomic. Re-read the durable state so the
+        // in-memory lists cannot remain ahead of the persisted database.
+        try {
+          await _restoreFromDatabase();
+        } catch (rollbackError, rollbackStack) {
+          debugPrint('Database rollback/reload failed: $rollbackError');
+          debugPrintStack(stackTrace: rollbackStack);
+        }
+
+        rootScaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(uiT('Save failed. Your last saved data was kept.')),
+            action: SnackBarAction(
+              label: uiT('OK'),
+              onPressed: () {},
+            ),
+          ),
+        );
+        return false;
+      }
+    });
+
+    _saveChain = operation.then<void>((_) {}, onError: (_) {});
+    return operation;
+  }
+
   Future<void> load() async {
     if (_loaded) return;
     _loaded = true;
     loadError = null;
 
     try {
+      await _database.open();
+
+      // SQLite is now the primary store. If this is a fresh database, migrate
+      // the existing SharedPreferences JSON once and leave it untouched as a
+      // legacy backup source. No JSON copy is kept in memory after migration.
+      if (!await _database.isEmpty()) {
+        await _restoreFromDatabase();
+        return;
+      }
+
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_storageKey);
 
       if (raw == null || raw.isEmpty) {
-        _lastKnownGoodJson = jsonEncode(_snapshot());
+        await _database.replaceSnapshot(_snapshot());
         return;
       }
 
@@ -1192,108 +1276,33 @@ class AppData {
           if (backup == null || backup.isEmpty) rethrow;
           parsed = _parseIntoTemporary(backup);
         }
-
-        // The primary copy was bad; restore a complete, independently parsed
-        // copy. Never restore a partially parsed primary document.
-        _replaceStateFrom(parsed);
-        final goodJson = jsonEncode(_snapshot());
-        await prefs.setString(_storageKey, goodJson);
-        await prefs.remove(_tempStorageKey);
-        _lastKnownGoodJson = goodJson;
-        return;
       }
 
       _replaceStateFrom(parsed);
-      _lastKnownGoodJson = raw;
-
-      // Persist migrations only after the complete document parsed successfully.
-      if (!raw.contains('"paymentTransactions"') ||
-          !raw.contains('"cylinderCycles"') ||
-          !raw.contains('"cylinderTypes"')) {
-        final migrated = await save();
-        if (!migrated) {
-          // save() already restored the previous known-good state.
-          loadError = 'Data loaded, but the migration could not be saved.';
-        }
-      }
-    } catch (e) {
+      await _database.replaceSnapshot(_snapshot());
+    } catch (e, stackTrace) {
       loadError = 'Stored data could not be loaded safely: $e';
       debugPrint(loadError);
-      // Do not save here. In particular, never replace a damaged/unknown
-      // on-device database with the empty in-memory state.
-      _lastKnownGoodJson = jsonEncode(_snapshot());
+      debugPrintStack(stackTrace: stackTrace);
+      // Do not clear or overwrite either SQLite or the legacy backup when the
+      // database cannot be opened/read safely.
     }
   }
 
   Future<bool> save() {
-    final operation = _saveChain.then((_) async {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final json = jsonEncode(_snapshot());
-        final current = prefs.getString(_storageKey);
-        if (current != null && current.isNotEmpty) {
-          // Keep the previous successfully stored document as the rollback copy.
-          await prefs.setString(_backupStorageKey, current);
-        }
-
-        // Write the new document to a temporary key first, then replace the
-        // primary document. The temporary copy also survives a failed primary write.
-        await prefs.setString(_tempStorageKey, json);
-        final wrote = await prefs.setString(_storageKey, json);
-        if (!wrote) {
-          throw StateError('SharedPreferences rejected the database write.');
-        }
-        await prefs.remove(_tempStorageKey);
-
-        _lastKnownGoodJson = json;
-        lastSaveError = null;
-        return true;
-      } catch (e) {
-        lastSaveError = 'Could not save data: $e';
-        debugPrint(lastSaveError);
-
-        // Roll the in-memory state back to the last document known to be
-        // persisted. This prevents a later save from silently overwriting
-        // the stored database with an unsaved/partially changed state.
-        try {
-          final rollback = _parseIntoTemporary(_lastKnownGoodJson);
-          _replaceStateFrom(rollback);
-        } catch (rollbackError) {
-          debugPrint('Rollback failed: $rollbackError');
-        }
-
-        rootScaffoldMessengerKey.currentState?.showSnackBar(
-          SnackBar(
-            content: Text(uiT('Save failed. Your last saved data was kept.')),
-            action: SnackBarAction(
-              label: uiT('OK'),
-              onPressed: () {},
-            ),
-          ),
-        );
-        return false;
-      }
-    });
-
-    _saveChain = operation.then<void>((_) {}, onError: (_) {});
-    return operation;
+    return _tryDatabaseWrite(() => _database.replaceSnapshot(_snapshot()));
   }
 
   String exportJson() =>
       const JsonEncoder.withIndent('  ').convert(_snapshot());
 
   Future<void> importJson(String raw) async {
-    // Parse the complete backup into an isolated object first. Nothing in
-    // the live database changes until every record has been parsed.
+    // Parse the complete backup into an isolated object first. The live state
+    // is changed only after the import has been fully validated.
     final parsed = _parseIntoTemporary(raw);
-    final previous = _lastKnownGoodJson;
-
     _replaceStateFrom(parsed);
     final saved = await save();
-
     if (!saved) {
-      // save() rolls back to the previous persisted state.
-      _lastKnownGoodJson = previous;
       throw StateError('Imported data could not be saved.');
     }
   }
@@ -1401,7 +1410,9 @@ class AppData {
     product.lastIncomingDate = null;
     products.add(product);
 
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.upsertProduct(product.toJson()),
+    )) {
       throw StateError('Product could not be saved. Your previous saved data was kept.');
     }
   }
@@ -1460,7 +1471,9 @@ class AppData {
     updated.lastIncomingDate = existing.lastIncomingDate;
     products[index] = updated;
 
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.upsertProduct(updated.toJson()),
+    )) {
       throw StateError('Product could not be updated. Your previous saved data was kept.');
     }
   }
@@ -1543,7 +1556,20 @@ class AppData {
       supply.paidAmount = paidForSupply(supply.id);
     }
 
-    if (!await save()) {
+    Map<String, dynamic>? paymentJson;
+    if (supply.paidAmount > 0) {
+      final payment = paymentTransactions
+          .where((p) => p.linkedType == 'supply' && p.linkedId == supply.id)
+          .toList();
+      if (payment.isNotEmpty) paymentJson = payment.last.toJson();
+    }
+    if (!await _tryDatabaseWrite(
+      () => _database.saveIncomingBundle(
+        product: actualProduct!.toJson(),
+        supply: supply.toJson(),
+        payment: paymentJson,
+      ),
+    )) {
       throw StateError('Incoming product could not be saved. Your previous saved data was kept.');
     }
   }
@@ -1585,7 +1611,12 @@ class AppData {
     );
     products.removeWhere((p) => p.id == product.id);
 
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.deleteProductBundle(
+        productId: product.id,
+        incomingIds: incomingIds.toList(),
+      ),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -1683,14 +1714,18 @@ class AppData {
   // ---- People ----
   Future<void> addPerson(Person p) async {
     people.add(p);
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.insertPerson(p.toJson()),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
 
   Future<void> deletePerson(Person person) async {
     people.remove(person);
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.deletePerson(person.toJson()),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -1781,7 +1816,9 @@ class AppData {
         note: note,
       ),
     );
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.insertPayment(paymentTransactions.last.toJson()),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -1848,7 +1885,12 @@ class AppData {
     );
     incomingSupplies.removeAt(index);
 
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.deleteIncomingBundle(
+        id: id,
+        product: product?.toJson(),
+      ),
+    )) {
       throw StateError('Incoming product deletion could not be saved. Your previous saved data was kept.');
     }
   }
@@ -1882,7 +1924,15 @@ class AppData {
     }
     supply.paidAmount = paidForSupply(id);
     supply.paymentDate = paymentDate ?? supply.paymentDate;
-    if (!await save()) {
+    final Map<String, dynamic>? paymentJson = delta.abs() > 0.000001
+        ? paymentTransactions.last.toJson()
+        : null;
+    if (!await _tryDatabaseWrite(
+      () => _database.updateIncomingPaymentBundle(
+        supply: supply.toJson(),
+        payment: paymentJson,
+      ),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -1983,7 +2033,19 @@ class AppData {
       sale.paid = 0;
     }
 
-    if (!await save()) {
+    final changedProducts = inventoryByProduct.values.toSet().toList();
+    final salePayments = paymentTransactions
+        .where((p) => p.linkedType == 'sale' && p.linkedId == sale.voucherNumber)
+        .map((p) => p.toJson())
+        .toList();
+    if (!await _tryDatabaseWrite(
+      () => _database.saveSaleBundle(
+        sale: sale.toJson(),
+        items: items.map((item) => item.toJson()).toList(),
+        products: changedProducts.map((product) => product.toJson()).toList(),
+        payments: salePayments,
+      ),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -2028,7 +2090,15 @@ class AppData {
     if (paymentMethod != null) sale.paymentMethod = paymentMethod;
     if (date != null) sale.date = date;
     if (customer != null) sale.customer = customer;
-    if (!await save()) {
+    final Map<String, dynamic>? paymentJson = delta.abs() > 0.000001
+        ? paymentTransactions.last.toJson()
+        : null;
+    if (!await _tryDatabaseWrite(
+      () => _database.updateSalePaymentBundle(
+        sale: sale.toJson(),
+        payment: paymentJson,
+      ),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -2061,7 +2131,23 @@ class AppData {
     paymentTransactions.removeWhere(
       (p) => p.linkedType == 'sale' && p.linkedId == voucherNumber,
     );
-    if (!await save()) {
+    final restoredProducts = items
+        .map((item) {
+          if (item.inventoryProductId.isNotEmpty) {
+            return productById(item.inventoryProductId);
+          }
+          final selected = _productForSaleItem(item);
+          return selected == null ? null : inventoryProductForSale(selected);
+        })
+        .whereType<Product>()
+        .toSet()
+        .toList();
+    if (!await _tryDatabaseWrite(
+      () => _database.deleteSaleBundle(
+        voucherNumber: voucherNumber,
+        products: restoredProducts.map((product) => product.toJson()).toList(),
+      ),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -2195,7 +2281,14 @@ class AppData {
       );
     }
 
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.saveIncomeExpenseBundle(
+        entry: e.toJson(),
+        expense: e.type == 'expense'
+            ? expenses.firstWhere((expense) => expense.id == e.id).toJson()
+            : null,
+      ),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -2215,7 +2308,12 @@ class AppData {
       if (expenseIndex >= 0) expenses.removeAt(expenseIndex);
     }
 
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.deleteIncomeExpenseBundle(
+        id: id,
+        isExpense: entry?.type == 'expense',
+      ),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -2241,7 +2339,9 @@ class AppData {
       throw StateError('A cylinder type with this name already exists in this category.');
     }
     cylinderTypes.add(type);
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.replaceCylinderTypeBundle(type.toJson()),
+    )) {
       throw StateError('Cylinder type could not be saved. Your previous saved data was kept.');
     }
   }
@@ -2258,7 +2358,16 @@ class AppData {
     if (cylinderTypes.isEmpty) {
       _ensureDefaultCylinderTypes();
     }
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () async {
+        await _database.deleteCylinderTypeBundle(id);
+        if (cylinderTypes.isNotEmpty) {
+          for (final type in cylinderTypes) {
+            await _database.replaceCylinderTypeBundle(type.toJson());
+          }
+        }
+      },
+    )) {
       throw StateError('Cylinder type deletion could not be saved. Your previous saved data was kept.');
     }
   }
@@ -2277,7 +2386,9 @@ class AppData {
 
     final oldQuantity = type.totalQuantity;
     type.totalQuantity = quantity;
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.replaceCylinderTypeBundle(type.toJson()),
+    )) {
       type.totalQuantity = oldQuantity;
       throw StateError('Cylinder quantity could not be saved. Your previous saved data was kept.');
     }
@@ -2309,7 +2420,12 @@ class AppData {
     cylinderCycles.add(cycle);
     type.totalQuantity = newQuantity < 0 ? 0 : newQuantity;
 
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.saveCylinderCycleBundle(
+        cycle: cycle.toJson(),
+        type: type.toJson(),
+      ),
+    )) {
       cylinderCycles.removeWhere((item) => item.id == cycle.id);
       if (oldQuantity != null) {
         type.totalQuantity = oldQuantity;
@@ -2333,7 +2449,12 @@ class AppData {
       type.totalQuantity = restoredQuantity < 0 ? 0 : restoredQuantity;
     }
 
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.deleteCylinderCycleBundle(
+        id: id,
+        type: type?.toJson(),
+      ),
+    )) {
       cylinderCycles.insert(index, cycle);
       if (oldQuantity != null) {
         type?.totalQuantity = oldQuantity;
@@ -2343,7 +2464,11 @@ class AppData {
   }
 
   Future<void> saveCylinderRows() async {
-    if (!await save()) {
+    if (!await _tryDatabaseWrite(
+      () => _database.replaceCylinderRows(
+        cylinderRows.map((row) => row.toJson()).toList(),
+      ),
+    )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
   }
@@ -2389,6 +2514,9 @@ class PosDashboardScreen extends StatelessWidget {
         break;
       case 'Data Backup':
         targetScreen = const DataBackupPage(title: 'Data Backup');
+        break;
+      case 'Wi-Fi Sync':
+        targetScreen = const WifiSyncPage(title: 'Wi-Fi Sync');
         break;
       case 'Products':
         targetScreen = const ProductCatalogPage(title: 'Products');
@@ -2584,6 +2712,14 @@ class PosDashboardScreen extends StatelessWidget {
                           pageKey: 'Data Backup',
                           labelKey: 'Data Backup',
                           icon: Icons.backup_outlined,
+                        ),
+                      ),
+                      _buildDrawerItem(
+                        context,
+                        const _DashboardPageButton(
+                          pageKey: 'Wi-Fi Sync',
+                          labelKey: 'Wi-Fi Sync',
+                          icon: Icons.wifi_find_outlined,
                         ),
                       ),
                     ],
@@ -4518,20 +4654,17 @@ class _SalesReportPageState extends State<SalesReportPage> {
     );
   }
 
+  pw.AlignmentGeometry _pdfColumnAlignment(int index, int columnCount) {
+    if (index == columnCount - 1) return pw.Alignment.center;
+    if (index >= 4) return pw.Alignment.centerRight;
+    return pw.Alignment.centerLeft;
+  }
+
   pw.TableRow _pdfReportHeaderRow(
     List<String> headers, {
     required ShapedFont regularFont,
     required ShapedFont boldFont,
   }) {
-    const alignments = <pw.AlignmentGeometry>[
-      pw.Alignment.centerLeft,
-      pw.Alignment.centerLeft,
-      pw.Alignment.centerLeft,
-      pw.Alignment.centerLeft,
-      pw.Alignment.centerRight,
-      pw.Alignment.centerRight,
-      pw.Alignment.center,
-    ];
     return pw.TableRow(
       repeat: true,
       decoration: const pw.BoxDecoration(color: PdfColors.teal700),
@@ -4541,10 +4674,10 @@ class _SalesReportPageState extends State<SalesReportPage> {
             headers[i],
             regularFont: regularFont,
             boldFont: boldFont,
-            fontSize: 9,
+            fontSize: headers.length > 7 ? 8 : 9,
             bold: true,
             color: PdfColors.white,
-            alignment: alignments[i],
+            alignment: _pdfColumnAlignment(i, headers.length),
           ),
       ],
     );
@@ -4556,15 +4689,6 @@ class _SalesReportPageState extends State<SalesReportPage> {
     required ShapedFont regularFont,
     required ShapedFont boldFont,
   }) {
-    const alignments = <pw.AlignmentGeometry>[
-      pw.Alignment.centerLeft,
-      pw.Alignment.centerLeft,
-      pw.Alignment.centerLeft,
-      pw.Alignment.centerLeft,
-      pw.Alignment.centerRight,
-      pw.Alignment.centerRight,
-      pw.Alignment.center,
-    ];
     return pw.TableRow(
       decoration: rowIndex.isOdd
           ? const pw.BoxDecoration(color: PdfColors.grey100)
@@ -4575,8 +4699,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
             row[i],
             regularFont: regularFont,
             boldFont: boldFont,
-            fontSize: 8.5,
-            alignment: alignments[i],
+            fontSize: row.length > 7 ? 7.7 : 8.5,
+            alignment: _pdfColumnAlignment(i, row.length),
           ),
       ],
     );
@@ -4590,15 +4714,27 @@ class _SalesReportPageState extends State<SalesReportPage> {
   }) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: .4),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(1.2),
-        1: pw.FlexColumnWidth(1.4),
-        2: pw.FlexColumnWidth(2.0),
-        3: pw.FlexColumnWidth(2.2),
-        4: pw.FlexColumnWidth(1.2),
-        5: pw.FlexColumnWidth(1.2),
-        6: pw.FlexColumnWidth(1.0),
-      },
+      columnWidths: headers.length > 7
+          ? const {
+              0: pw.FlexColumnWidth(1.25),
+              1: pw.FlexColumnWidth(1.35),
+              2: pw.FlexColumnWidth(1.8),
+              3: pw.FlexColumnWidth(2.5),
+              4: pw.FlexColumnWidth(1.15),
+              5: pw.FlexColumnWidth(1.15),
+              6: pw.FlexColumnWidth(1.2),
+              7: pw.FlexColumnWidth(1.15),
+              8: pw.FlexColumnWidth(1.1),
+            }
+          : const {
+              0: pw.FlexColumnWidth(1.2),
+              1: pw.FlexColumnWidth(1.4),
+              2: pw.FlexColumnWidth(2.0),
+              3: pw.FlexColumnWidth(2.2),
+              4: pw.FlexColumnWidth(1.2),
+              5: pw.FlexColumnWidth(1.2),
+              6: pw.FlexColumnWidth(1.0),
+            },
       children: [
         _pdfReportHeaderRow(
           headers,
@@ -4616,52 +4752,414 @@ class _SalesReportPageState extends State<SalesReportPage> {
     );
   }
 
-  pw.TableRow _pdfSummaryRow(
-    String label,
-    String value, {
-    bool bold = false,
-    PdfColor? color,
+  double _reportPaid(List<Sale> sales) {
+    return sales.fold<double>(
+      0,
+      (sum, sale) => sum + AppData.instance.paidForSale(sale.voucherNumber),
+    );
+  }
+
+  double _reportOutstanding(List<Sale> sales) {
+    return sales.fold<double>(
+      0,
+      (sum, sale) {
+        final total = AppData.instance.totalForSale(sale.voucherNumber);
+        final paid = AppData.instance.paidForSale(sale.voucherNumber);
+        return sum + (total - paid).clamp(0, double.infinity).toDouble();
+      },
+    );
+  }
+
+  Map<String, double> _reportPaymentMethods(List<Sale> sales) {
+    final result = <String, double>{};
+    for (final sale in sales) {
+      final payments = AppData.instance.paymentsForSale(sale.voucherNumber);
+      if (payments.isEmpty && sale.paid > 0) {
+        final key = sale.paymentMethod.trim().isEmpty
+            ? uiT('Unspecified')
+            : sale.paymentMethod.trim();
+        result[key] = (result[key] ?? 0) + sale.paid;
+        continue;
+      }
+      for (final payment in payments) {
+        if (payment.amount.abs() <= 0.000001) continue;
+        final key = payment.method.trim().isEmpty
+            ? uiT('Unspecified')
+            : payment.method.trim();
+        result[key] = (result[key] ?? 0) + payment.amount;
+      }
+    }
+    result.removeWhere((_, value) => value.abs() <= 0.005);
+    return result;
+  }
+
+  List<MapEntry<String, ({double quantity, double sales, double cost, double profit})>>
+      _reportProducts(List<Sale> sales) {
+    final map = <String, ({double quantity, double sales, double cost, double profit})>{};
+    for (final sale in sales) {
+      for (final item in AppData.instance.itemsForSale(sale.voucherNumber)) {
+        final key = item.name.trim().isEmpty ? uiT('Unnamed Product') : item.name.trim();
+        final existing = map[key];
+        final itemSales = item.amount;
+        final itemCost = item.amount - item.profit;
+        map[key] = (
+          quantity: (existing?.quantity ?? 0) + item.quantity,
+          sales: (existing?.sales ?? 0) + itemSales,
+          cost: (existing?.cost ?? 0) + itemCost,
+          profit: (existing?.profit ?? 0) + item.profit,
+        );
+      }
+    }
+    final result = map.entries.toList();
+    result.sort((a, b) => b.value.sales.compareTo(a.value.sales));
+    return result;
+  }
+
+  List<MapEntry<String, ({double sales, double paid, double balance, int count})>>
+      _reportCustomers(List<Sale> sales) {
+    final map = <String, ({double sales, double paid, double balance, int count})>{};
+    for (final sale in sales) {
+      final key = sale.customerName.trim().isEmpty
+          ? uiT('Customer')
+          : sale.customerName.trim();
+      final total = AppData.instance.totalForSale(sale.voucherNumber);
+      final paid = AppData.instance.paidForSale(sale.voucherNumber);
+      final balance = (total - paid).clamp(0, double.infinity).toDouble();
+      final existing = map[key];
+      map[key] = (
+        sales: (existing?.sales ?? 0) + total,
+        paid: (existing?.paid ?? 0) + paid,
+        balance: (existing?.balance ?? 0) + balance,
+        count: (existing?.count ?? 0) + 1,
+      );
+    }
+    final result = map.entries.toList();
+    result.sort((a, b) => b.value.sales.compareTo(a.value.sales));
+    return result;
+  }
+
+  List<MapEntry<String, double>> _reportExpenses() {
+    final map = <String, double>{};
+    for (final entry in AppData.instance.incomeExpenseEntries) {
+      if (entry.type != 'expense' || !_matchesPeriod(entry.date)) continue;
+      final key = entry.name.trim().isEmpty ? uiT('Other') : entry.name.trim();
+      map[key] = (map[key] ?? 0) + entry.amount;
+    }
+    final result = map.entries.toList();
+    result.sort((a, b) => b.value.compareTo(a.value));
+    return result;
+  }
+
+  String _compactMoney(double value) {
+    final sign = value < 0 ? '-' : '';
+    final abs = value.abs();
+    if (abs >= 1000000000) return '$sign${(abs / 1000000000).toStringAsFixed(1)}B';
+    if (abs >= 1000000) return '$sign${(abs / 1000000).toStringAsFixed(1)}M';
+    if (abs >= 1000) return '$sign${(abs / 1000).toStringAsFixed(1)}K';
+    return '$sign${abs.toStringAsFixed(0)}';
+  }
+
+  pw.Widget _pdfVerticalBarChart(
+    List<MapEntry<String, double>> values, {
+    required ShapedFont regularFont,
+    required ShapedFont boldFont,
+    PdfColor barColor = PdfColors.teal700,
+    int maxBars = 31,
+    double height = 115,
+  }) {
+    if (values.isEmpty) {
+      return _pdfReportText(
+        uiT('No chart data for this period.'),
+        regularFont: regularFont,
+        boldFont: boldFont,
+        fontSize: 8,
+        color: PdfColors.grey600,
+      );
+    }
+
+    final shown = values.length <= maxBars ? values : values.sublist(values.length - maxBars);
+    final maxValue = shown.fold<double>(0, (m, e) => e.value > m ? e.value : m);
+    final safeMax = maxValue <= 0 ? 1 : maxValue;
+
+    return pw.Container(
+      height: height + 34,
+      padding: const pw.EdgeInsets.only(top: 6),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
+        children: [
+          for (var i = 0; i < shown.length; i++) ...[
+            pw.Expanded(
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Container(
+                    height: height * (shown[i].value / safeMax),
+                    width: double.infinity,
+                    margin: const pw.EdgeInsets.symmetric(horizontal: 2),
+                    decoration: pw.BoxDecoration(
+                      color: barColor,
+                      borderRadius: const pw.BorderRadius.only(
+                        topLeft: pw.Radius.circular(2),
+                        topRight: pw.Radius.circular(2),
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  _pdfReportText(
+                    shown[i].key,
+                    regularFont: regularFont,
+                    boldFont: boldFont,
+                    fontSize: shown.length > 20 ? 5.5 : 6.5,
+                    alignment: pw.Alignment.center,
+                    color: PdfColors.grey700,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfHorizontalBarChart(
+    List<MapEntry<String, double>> values, {
+    required ShapedFont regularFont,
+    required ShapedFont boldFont,
+    int maxBars = 6,
+    PdfColor barColor = PdfColors.teal700,
+    bool signed = false,
+  }) {
+    if (values.isEmpty) {
+      return _pdfReportText(
+        uiT('No chart data for this period.'),
+        regularFont: regularFont,
+        boldFont: boldFont,
+        fontSize: 8,
+        color: PdfColors.grey600,
+      );
+    }
+
+    final shown = values.take(maxBars).toList();
+    final maxValue = shown.fold<double>(0, (m, e) {
+      final v = signed ? e.value.abs() : e.value;
+      return v > m ? v : m;
+    });
+    final safeMax = maxValue <= 0 ? 1 : maxValue;
+
+    return pw.Column(
+      children: [
+        for (final item in shown)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 7),
+            child: pw.Row(
+              children: [
+                pw.SizedBox(
+                  width: 105,
+                  child: _pdfReportText(
+                    item.key,
+                    regularFont: regularFont,
+                    boldFont: boldFont,
+                    fontSize: 7.5,
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                ),
+                pw.SizedBox(width: 6),
+                pw.Expanded(
+                  child: pw.Container(
+                    child: pw.Column(
+                      children: [
+                      pw.Container(
+                        height: 12,
+                        decoration: const pw.BoxDecoration(
+                          color: PdfColors.grey200,
+                          borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+                        ),
+                        child: pw.Row(
+                          children: [
+                            if (!(signed && item.value < 0)) ...[
+                              pw.Expanded(
+                                flex: (1000 * (item.value.abs() / safeMax)).round().clamp(1, 999).toInt(),
+                                child: pw.Container(
+                                  height: 12,
+                                  decoration: pw.BoxDecoration(
+                                    color: barColor,
+                                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+                                  ),
+                                ),
+                              ),
+                              pw.Expanded(
+                                flex: (1000 - (1000 * (item.value.abs() / safeMax)).round()).clamp(1, 999),
+                                child: pw.SizedBox(),
+                              ),
+                            ] else ...[
+                              pw.Expanded(
+                                flex: (1000 - (1000 * (item.value.abs() / safeMax)).round()).clamp(1, 999),
+                                child: pw.SizedBox(),
+                              ),
+                              pw.Expanded(
+                                flex: (1000 * (item.value.abs() / safeMax)).round().clamp(1, 999).toInt(),
+                                child: pw.Container(
+                                  height: 12,
+                                  decoration: const pw.BoxDecoration(
+                                    color: PdfColors.red700,
+                                    borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.SizedBox(width: 6),
+                pw.SizedBox(
+                  width: 62,
+                  child: _pdfReportText(
+                    _compactMoney(item.value),
+                    regularFont: regularFont,
+                    boldFont: boldFont,
+                    fontSize: 7,
+                    alignment: pw.Alignment.centerRight,
+                    color: signed && item.value < 0 ? PdfColors.red800 : PdfColors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  PdfColor _pdfMetricColor(String code) {
+    switch (code) {
+      case 'blue':
+        return PdfColors.blue800;
+      case 'red':
+        return PdfColors.red800;
+      case 'slate':
+        return PdfColors.blueGrey700;
+      case 'green':
+        return PdfColors.green800;
+      case 'orange':
+        return PdfColors.orange800;
+      default:
+        return PdfColors.teal800;
+    }
+  }
+
+  pw.Widget _pdfMetricGrid(
+    List<List<String>> metrics, {
     required ShapedFont regularFont,
     required ShapedFont boldFont,
   }) {
-    final resolvedColor = color ?? PdfColors.black;
-    return pw.TableRow(children: [
-      _pdfReportCell(
-        label,
+    return pw.Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      children: [
+        for (final metric in metrics)
+          pw.Container(
+            width: 145,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+              border: pw.Border.all(color: PdfColors.grey300, width: .5),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _pdfReportText(
+                  metric[0],
+                  regularFont: regularFont,
+                  boldFont: boldFont,
+                  fontSize: 7,
+                  color: PdfColors.grey700,
+                ),
+                pw.SizedBox(height: 3),
+                _pdfReportText(
+                  metric[1],
+                  regularFont: regularFont,
+                  boldFont: boldFont,
+                  fontSize: 10,
+                  bold: true,
+                  color: metric.length > 2 ? _pdfMetricColor(metric[2]) : PdfColors.teal800,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  List<MapEntry<String, double>> _reportSalesTrend(List<Sale> sales) {
+    final map = <String, double>{};
+    if (_period == 'Yearly') {
+      for (var month = 1; month <= 12; month++) {
+        final monthSales = sales
+            .where((sale) => sale.date.month == month)
+            .toList();
+        map[_monthNames[month - 1].substring(0, 3)] = _totalSalesAmount(monthSales);
+      }
+    } else if (_period == 'Monthly') {
+      final days = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day;
+      for (var day = 1; day <= days; day++) {
+        final daySales = sales.where((sale) => sale.date.day == day).toList();
+        map[day.toString()] = _totalSalesAmount(daySales);
+      }
+    } else {
+      final byHour = <int, double>{};
+      for (final sale in sales) {
+        final hour = sale.date.hour;
+        byHour[hour] = (byHour[hour] ?? 0) +
+            AppData.instance.totalForSale(sale.voucherNumber);
+      }
+      for (var hour = 0; hour < 24; hour++) {
+        final value = byHour[hour] ?? 0;
+        if (value > 0) map[hour.toString().padLeft(2, '0')] = value;
+      }
+    }
+    return map.entries.toList();
+  }
+
+  pw.Widget _pdfSectionTitle(
+    String title, {
+    required ShapedFont regularFont,
+    required ShapedFont boldFont,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 7),
+      child: _pdfReportText(
+        uiT(title),
         regularFont: regularFont,
         boldFont: boldFont,
-        fontSize: bold ? 12 : 10.5,
-        bold: bold,
-        color: resolvedColor,
+        fontSize: 13,
+        bold: true,
+        color: PdfColors.teal800,
       ),
-      _pdfReportCell(
-        value,
-        regularFont: regularFont,
-        boldFont: boldFont,
-        fontSize: bold ? 12 : 10.5,
-        bold: bold,
-        color: resolvedColor,
-        alignment: pw.Alignment.centerRight,
-      ),
-    ]);
+    );
   }
 
   Future<void> _generateYearlySummaryPdf() async {
-    // Yearly detailed exports can become extremely large because complex
-    // Myanmar text is rendered as vector glyph paths. Keep the yearly export
-    // deliberately compact: one row per month plus a yearly total.
     final year = _selectedYear;
-    final rows = <List<String>>[];
+    final sales = AppData.instance.sales
+        .where((sale) => sale.date.year == year)
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
 
     double yearSales = 0;
     double yearCost = 0;
     double yearExpenses = 0;
-    int yearTransactions = 0;
+    double yearPaid = 0;
+    double yearOutstanding = 0;
+    int yearTransactions = sales.length;
+    final rows = <List<String>>[];
 
     for (var month = 1; month <= 12; month++) {
-      final monthSales = AppData.instance.sales
-          .where((sale) => sale.date.year == year && sale.date.month == month)
-          .toList();
+      final monthSales = sales.where((sale) => sale.date.month == month).toList();
       final salesTotal = _totalSalesAmount(monthSales);
       final costTotal = _totalLpgCost(monthSales);
       final expenseTotal = AppData.instance.incomeExpenseEntries
@@ -4670,12 +5168,15 @@ class _SalesReportPageState extends State<SalesReportPage> {
               entry.date.year == year &&
               entry.date.month == month)
           .fold<double>(0, (sum, entry) => sum + entry.amount);
+      final paidTotal = _reportPaid(monthSales);
+      final balanceTotal = _reportOutstanding(monthSales);
       final net = salesTotal - costTotal - expenseTotal;
 
-      yearTransactions += monthSales.length;
       yearSales += salesTotal;
       yearCost += costTotal;
       yearExpenses += expenseTotal;
+      yearPaid += paidTotal;
+      yearOutstanding += balanceTotal;
 
       rows.add([
         _monthNames[month - 1],
@@ -4683,130 +5184,300 @@ class _SalesReportPageState extends State<SalesReportPage> {
         _money(salesTotal),
         _money(costTotal),
         _money(expenseTotal),
+        _money(paidTotal),
+        _money(balanceTotal),
         _money(net),
       ]);
     }
 
-    final yearNet = yearSales - yearCost - yearExpenses;
-    final regular = await PdfGoogleFonts.notoSansRegular();
-    final bold = await PdfGoogleFonts.notoSansBold();
-    final doc = pw.Document();
+    final yearGrossProfit = yearSales - yearCost;
+    final yearNet = yearGrossProfit - yearExpenses;
+    final productRows = _reportProducts(sales);
+    final customerRows = _reportCustomers(sales);
+    final paymentRows = _reportPaymentMethods(sales).entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final expenseRows = AppData.instance.incomeExpenseEntries
+        .where((entry) => entry.type == 'expense' && entry.date.year == year)
+        .fold<Map<String, double>>({}, (map, entry) {
+          final key = entry.name.trim().isEmpty ? uiT('Other') : entry.name.trim();
+          map[key] = (map[key] ?? 0) + entry.amount;
+          return map;
+        })
+        .entries
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
-    pw.Widget text(
-      String value, {
-      double size = 9,
-      bool isBold = false,
-      PdfColor color = PdfColors.black,
-      pw.TextAlign align = pw.TextAlign.left,
-    }) {
-      return pw.Text(
-        value,
-        textAlign: align,
-        style: pw.TextStyle(
-          font: isBold ? bold : regular,
-          fontSize: size,
-          color: color,
+    final fonts = await _loadReportShapedFonts();
+    final regularFont = fonts.regular;
+    final boldFont = fonts.bold;
+    try {
+      final doc = pw.Document();
+      final normalPdfRegular = await _loadMyanmarPdfRegularAsPdfFont();
+      final normalPdfBold = await _loadMyanmarPdfBoldAsPdfFont();
+
+      pw.Widget header() => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _pdfReportText(
+                uiT('Kyal Sin Lay Energy & Tech'),
+                regularFont: regularFont,
+                boldFont: boldFont,
+                fontSize: 18,
+                bold: true,
+                color: PdfColors.teal800,
+              ),
+              pw.SizedBox(height: 2),
+              _pdfReportText(
+                uiF('Yearly Sales Report - {year}', {'year': year.toString()}),
+                regularFont: regularFont,
+                boldFont: boldFont,
+                fontSize: 12,
+                bold: true,
+              ),
+              _pdfReportText(
+                uiF('Generated: {date}', {'date': _formatDateOnly(DateTime.now())}),
+                regularFont: regularFont,
+                boldFont: boldFont,
+                fontSize: 8,
+                color: PdfColors.grey600,
+              ),
+              pw.SizedBox(height: 8),
+              pw.Divider(color: PdfColors.grey400),
+            ],
+          );
+
+      pw.Widget footer(pw.Context context) => pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: _pdfReportText(
+              uiF('Page {page}', {'page': context.pageNumber.toString()}),
+              regularFont: regularFont,
+              boldFont: boldFont,
+              fontSize: 8,
+              color: PdfColors.grey600,
+              alignment: pw.Alignment.centerRight,
+            ),
+          );
+
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.fromLTRB(28, 32, 28, 28),
+          theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+          header: (_) => header(),
+          footer: footer,
+          build: (_) => [
+            _pdfMetricGrid([
+              [uiT('Total Sales'), _money(yearSales), 'teal'],
+              [uiT('Total Paid'), _money(yearPaid), 'blue'],
+              [uiT('Outstanding'), _money(yearOutstanding), 'red'],
+              [uiT('COGS'), _money(yearCost), 'slate'],
+              [uiT('Gross Profit'), _money(yearGrossProfit), 'green'],
+              [uiT('Expenses'), _money(yearExpenses), 'orange'],
+              [uiT('Net Profit'), _money(yearNet), yearNet >= 0 ? 'green' : 'red'],
+              [uiT('Transactions'), yearTransactions.toString(), '0xFF455A64'],
+            ], regularFont: regularFont, boldFont: boldFont),
+            pw.SizedBox(height: 15),
+            _pdfSectionTitle('Monthly Sales Trend', regularFont: regularFont, boldFont: boldFont),
+            _pdfVerticalBarChart(
+              rows.asMap().entries.map((e) => MapEntry(_monthNames[e.key].substring(0, 3),
+                  double.tryParse(rows[e.key][2].replaceAll(RegExp(r'[^0-9.-]'), '')) ?? 0)).toList(),
+              regularFont: regularFont,
+              boldFont: boldFont,
+              maxBars: 12,
+            ),
+            pw.SizedBox(height: 10),
+            _pdfSectionTitle('Monthly Financial Breakdown', regularFont: regularFont, boldFont: boldFont),
+            _pdfHorizontalBarChart(
+              [
+                MapEntry(uiT('Sales'), yearSales),
+                MapEntry(uiT('COGS'), yearCost),
+                MapEntry(uiT('Gross Profit'), yearGrossProfit),
+                MapEntry(uiT('Expenses'), yearExpenses),
+                MapEntry(uiT('Net Profit'), yearNet),
+              ],
+              regularFont: regularFont,
+              boldFont: boldFont,
+              maxBars: 5,
+              signed: true,
+            ),
+            pw.SizedBox(height: 10),
+            _pdfSectionTitle('Sales by Month', regularFont: regularFont, boldFont: boldFont),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: .4),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(1.4),
+                1: pw.FlexColumnWidth(.9),
+                2: pw.FlexColumnWidth(1.5),
+                3: pw.FlexColumnWidth(1.5),
+                4: pw.FlexColumnWidth(1.5),
+                5: pw.FlexColumnWidth(1.5),
+                6: pw.FlexColumnWidth(1.5),
+                7: pw.FlexColumnWidth(1.5),
+              },
+              children: [
+                _pdfReportHeaderRow(
+                  ['Month', 'Sales', 'Sales Amount', 'COGS', 'Expenses', 'Paid', 'Balance', 'Net'],
+                  regularFont: regularFont,
+                  boldFont: boldFont,
+                ),
+                for (var i = 0; i < rows.length; i++)
+                  _pdfReportDataRow(
+                    rows[i],
+                    rowIndex: i,
+                    regularFont: regularFont,
+                    boldFont: boldFont,
+                  ),
+                _pdfReportDataRow(
+                  [
+                    uiT('YEAR TOTAL'),
+                    yearTransactions.toString(),
+                    _money(yearSales),
+                    _money(yearCost),
+                    _money(yearExpenses),
+                    _money(yearPaid),
+                    _money(yearOutstanding),
+                    _money(yearNet),
+                  ],
+                  rowIndex: 0,
+                  regularFont: regularFont,
+                  boldFont: boldFont,
+                ),
+              ],
+            ),
+          ],
         ),
       );
-    }
 
-    doc.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.fromLTRB(28, 32, 28, 28),
-        build: (_) => [
-          text(uiT('Kyal Sin Lay Energy & Tech'), size: 18, isBold: true,
-              color: PdfColors.teal800),
-          pw.SizedBox(height: 3),
-          text(uiF('Yearly Sales Summary - {year}', {'year': year.toString()}), size: 13, isBold: true),
-          pw.SizedBox(height: 3),
-          text(uiF('Transactions: {count}', {'count': yearTransactions.toString()}), size: 9,
-              color: PdfColors.grey700),
-          pw.SizedBox(height: 12),
-          pw.Table(
-            border: pw.TableBorder.all(color: PdfColors.grey400, width: .4),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(1.5),
-              1: pw.FlexColumnWidth(1.0),
-              2: pw.FlexColumnWidth(1.5),
-              3: pw.FlexColumnWidth(1.5),
-              4: pw.FlexColumnWidth(1.5),
-              5: pw.FlexColumnWidth(1.5),
-            },
-            children: [
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.teal700),
-                children: [
-                  'Month', 'Sales Count', 'Sales', 'Cost', 'Expenses', 'Net',
-                ].map(uiT).map((value) => pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: text(value, size: 8.5, isBold: true,
-                      color: PdfColors.white),
-                )).toList(),
-              ),
-              for (var i = 0; i < rows.length; i++)
-                pw.TableRow(
-                  decoration: i.isOdd
-                      ? const pw.BoxDecoration(color: PdfColors.grey100)
-                      : null,
-                  children: [
-                    for (var j = 0; j < rows[i].length; j++)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.all(5),
-                        child: text(
-                          rows[i][j],
-                          size: 8.5,
-                          align: j == 0 || j == 1
-                              ? pw.TextAlign.left
-                              : pw.TextAlign.right,
-                        ),
-                      ),
-                  ],
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
+          theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+          header: (_) => header(),
+          footer: footer,
+          build: (_) => [
+            _pdfSectionTitle('Top Products by Revenue', regularFont: regularFont, boldFont: boldFont),
+            _pdfHorizontalBarChart(
+              productRows.map((e) => MapEntry(e.key, e.value.sales)).toList(),
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
+            pw.SizedBox(height: 10),
+            _pdfSectionTitle('Top Products by Profit', regularFont: regularFont, boldFont: boldFont),
+            _pdfHorizontalBarChart(
+              ([...productRows]..sort((a, b) => b.value.profit.compareTo(a.value.profit)))
+                  .map((e) => MapEntry(e.key, e.value.profit)).toList(),
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
+            pw.SizedBox(height: 12),
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _pdfSectionTitle('Payment Methods', regularFont: regularFont, boldFont: boldFont),
+                      _pdfHorizontalBarChart(paymentRows, regularFont: regularFont, boldFont: boldFont, maxBars: 5),
+                    ],
+                  ),
                 ),
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                pw.SizedBox(width: 24),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _pdfSectionTitle('Expense Breakdown', regularFont: regularFont, boldFont: boldFont),
+                      _pdfHorizontalBarChart(expenseRows, regularFont: regularFont, boldFont: boldFont, maxBars: 6, barColor: PdfColors.orange700),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 12),
+            _pdfSectionTitle('Customers by Sales', regularFont: regularFont, boldFont: boldFont),
+            _pdfHorizontalBarChart(
+              customerRows.map((e) => MapEntry(e.key, e.value.sales)).toList(),
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
+          ],
+        ),
+      );
+
+      if (customerRows.any((e) => e.value.balance > 0.005)) {
+        doc.addPage(
+          pw.MultiPage(
+            pageFormat: PdfPageFormat.a4.landscape,
+            margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
+            theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+            header: (_) => header(),
+            footer: footer,
+            build: (_) => [
+              _pdfSectionTitle('Outstanding Receivables', regularFont: regularFont, boldFont: boldFont),
+              _pdfHorizontalBarChart(
+                ([...customerRows]..sort((a, b) => b.value.balance.compareTo(a.value.balance)))
+                    .where((e) => e.value.balance > 0.005)
+                    .map((e) => MapEntry(e.key, e.value.balance)).toList(),
+                regularFont: regularFont,
+                boldFont: boldFont,
+                maxBars: 12,
+                barColor: PdfColors.red700,
+              ),
+              pw.SizedBox(height: 10),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: .4),
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(2.6),
+                  1: pw.FlexColumnWidth(1),
+                  2: pw.FlexColumnWidth(1.5),
+                  3: pw.FlexColumnWidth(1.5),
+                  4: pw.FlexColumnWidth(1.5),
+                },
                 children: [
-                  text(uiT('YEAR TOTAL'), size: 8.5, isBold: true),
-                  text(yearTransactions.toString(), size: 8.5, isBold: true,
-                      align: pw.TextAlign.left),
-                  text(_money(yearSales), size: 8.5, isBold: true,
-                      align: pw.TextAlign.right),
-                  text(_money(yearCost), size: 8.5, isBold: true,
-                      align: pw.TextAlign.right),
-                  text(_money(yearExpenses), size: 8.5, isBold: true,
-                      align: pw.TextAlign.right),
-                  text(_money(yearNet), size: 8.5, isBold: true,
-                      color: yearNet >= 0 ? PdfColors.green800 : PdfColors.red800,
-                      align: pw.TextAlign.right),
-                ].map((child) => pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: child,
-                )).toList(),
+                  _pdfReportHeaderRow(
+                    ['Customer', 'Invoices', 'Sales', 'Paid', 'Balance'],
+                    regularFont: regularFont,
+                    boldFont: boldFont,
+                  ),
+                  for (var i = 0; i < customerRows.length; i++)
+                    if (customerRows[i].value.balance > 0.005)
+                      _pdfReportDataRow(
+                        [
+                          customerRows[i].key,
+                          customerRows[i].value.count.toString(),
+                          _money(customerRows[i].value.sales),
+                          _money(customerRows[i].value.paid),
+                          _money(customerRows[i].value.balance),
+                        ],
+                        rowIndex: i,
+                        regularFont: regularFont,
+                        boldFont: boldFont,
+                      ),
+                ],
               ),
             ],
           ),
-          pw.SizedBox(height: 14),
-          text(
-            uiT('Yearly export uses a compact monthly summary to avoid excessive memory use on large transaction histories.'),
-            size: 8,
-            color: PdfColors.grey700,
-          ),
-        ],
-      ),
-    );
+        );
+      }
 
-    final bytes = await doc.save();
-    final uri = await FilePicker.saveFile(
-      dialogTitle: uiT('Save Yearly Sales Report'),
-      fileName: 'Sales_Report_$year.pdf',
-      mimeType: 'application/pdf',
-      bytes: Uint8List.fromList(bytes),
-    );
-
-    if (uri != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Yearly report saved to ') + uri.toString())),
+      final bytes = await doc.save();
+      final uri = await FilePicker.saveFile(
+        dialogTitle: uiT('Save Yearly Sales Report'),
+        fileName: 'Sales_Report_$year.pdf',
+        mimeType: 'application/pdf',
+        bytes: Uint8List.fromList(bytes),
       );
+
+      if (uri != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(uiT('Yearly report saved to ') + uri.toString())),
+        );
+      }
+    } finally {
+      regularFont.dispose();
+      boldFont.dispose();
     }
   }
 
@@ -4825,66 +5496,38 @@ class _SalesReportPageState extends State<SalesReportPage> {
       final totalSales = _totalSalesAmount(sales);
       final totalCost = _totalLpgCost(sales);
       final expenses = _manualExpenses();
-      final profitBefore = totalSales - totalCost;
-      final profitAfter = profitBefore - expenses;
+      final totalPaid = _reportPaid(sales);
+      final outstanding = _reportOutstanding(sales);
+      final grossProfit = totalSales - totalCost;
+      final netProfit = grossProfit - expenses;
+      final margin = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0;
+      final products = _reportProducts(sales);
+      final customers = _reportCustomers(sales);
+      final paymentMethods = _reportPaymentMethods(sales).entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final expenseBreakdown = _reportExpenses();
+      final trend = _reportSalesTrend(sales);
 
       final fonts = await _loadReportShapedFonts();
       regularFont = fonts.regular;
       boldFont = fonts.bold;
-
+      final reportRegularFont = regularFont;
+      final reportBoldFont = boldFont;
+      final normalPdfRegular = await _loadMyanmarPdfRegularAsPdfFont();
+      final normalPdfBold = await _loadMyanmarPdfBoldAsPdfFont();
       final doc = pw.Document();
+
       final headers = [
         'Date',
         'Voucher No.',
         'Customer',
         'Items',
         'Amount',
+        'Paid',
+        'Balance',
         'Profit',
         'Status',
       ].map(uiT).toList();
-
-      // Do NOT build one giant pw.Table for a yearly report. A large yearly
-      // dataset can create tens of thousands of PDF layout/shaping objects at
-      // once and cause the Flutter process to be killed for memory pressure.
-      // Build the rows as plain strings first, then render bounded chunks.
-      final rows = <List<String>>[];
-      for (final sale in sales) {
-        final items = AppData.instance.itemsForSale(sale.voucherNumber);
-        final itemsSummary =
-            items.map((i) => '${i.name} x${i.qty}').join(', ');
-        final amount = AppData.instance.totalForSale(sale.voucherNumber);
-        final profit = items.fold(0.0, (sum, i) => sum + i.profit);
-        final paid = AppData.instance.paidForSale(sale.voucherNumber);
-        final balance = (amount - paid).clamp(0, double.infinity);
-        final status = balance <= 0.005
-            ? 'PAID'
-            : (paid > 0 ? 'PARTIALLY PAID' : 'UNPAID');
-        rows.add([
-          _formatDateOnly(sale.date),
-          sale.voucherNumber,
-          sale.customerName.isEmpty ? 'Customer' : sale.customerName,
-          itemsSummary.isEmpty ? '-' : itemsSummary,
-          _money(amount),
-          _money(profit),
-          status,
-        ]);
-      }
-
-      final reportRegularFont = regularFont;
-      final reportBoldFont = boldFont;
-
-
-      final normalPdfRegular = await _loadMyanmarPdfRegularAsPdfFont();
-      final normalPdfBold = await _loadMyanmarPdfBoldAsPdfFont();
-
-      const rowsPerPage = 30;
-      final chunks = <List<List<String>>>[];
-      for (var start = 0; start < rows.length; start += rowsPerPage) {
-        final end = (start + rowsPerPage < rows.length)
-            ? start + rowsPerPage
-            : rows.length;
-        chunks.add(rows.sublist(start, end));
-      }
 
       pw.Widget reportHeader() => pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -4903,6 +5546,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
                 regularFont: reportRegularFont,
                 boldFont: reportBoldFont,
                 fontSize: 12,
+                bold: true,
               ),
               _pdfReportText(
                 uiF('Generated: {date}', {'date': _formatDateOnly(DateTime.now())}),
@@ -4928,148 +5572,230 @@ class _SalesReportPageState extends State<SalesReportPage> {
             ),
           );
 
-      pw.Widget summarySection() => pw.Column(
+      pw.Widget summaryPage() => pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _pdfReportText(
-                uiT('Summary'),
+              _pdfMetricGrid([
+                [uiT('Total Sales'), _money(totalSales), 'teal'],
+                [uiT('Total Paid'), _money(totalPaid), 'blue'],
+                [uiT('Outstanding'), _money(outstanding), 'red'],
+                [uiT('COGS'), _money(totalCost), 'slate'],
+                [uiT('Gross Profit'), _money(grossProfit), 'green'],
+                [uiT('Gross Margin'), '${margin.toStringAsFixed(1)}%', 'green'],
+                [uiT('Expenses'), _money(expenses), 'orange'],
+                [uiT('Net Profit'), _money(netProfit), netProfit >= 0 ? 'green' : 'red'],
+              ], regularFont: reportRegularFont, boldFont: reportBoldFont),
+              pw.SizedBox(height: 15),
+              _pdfSectionTitle(
+                _period == 'Monthly' ? 'Daily Sales Trend' : 'Sales by Hour',
                 regularFont: reportRegularFont,
                 boldFont: reportBoldFont,
-                fontSize: 13,
-                bold: true,
               ),
-              pw.SizedBox(height: 6),
-              pw.Table(
-                border: pw.TableBorder.all(color: PdfColors.grey400, width: .5),
-                columnWidths: const {
-                  0: pw.FlexColumnWidth(2),
-                  1: pw.FlexColumnWidth(2),
-                },
+              _pdfVerticalBarChart(
+                trend,
+                regularFont: reportRegularFont,
+                boldFont: reportBoldFont,
+                maxBars: 31,
+              ),
+              pw.SizedBox(height: 10),
+              _pdfSectionTitle('Financial Overview', regularFont: reportRegularFont, boldFont: reportBoldFont),
+              _pdfHorizontalBarChart(
+                [
+                  MapEntry(uiT('Sales'), totalSales),
+                  MapEntry(uiT('COGS'), totalCost),
+                  MapEntry(uiT('Gross Profit'), grossProfit),
+                  MapEntry(uiT('Expenses'), expenses),
+                  MapEntry(uiT('Net Profit'), netProfit),
+                ],
+                regularFont: reportRegularFont,
+                boldFont: reportBoldFont,
+                maxBars: 5,
+                signed: true,
+              ),
+              pw.SizedBox(height: 10),
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  _pdfSummaryRow(
-                    uiT('LPG Cost'),
-                    _money(totalCost),
-                    regularFont: reportRegularFont,
-                    boldFont: reportBoldFont,
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _pdfSectionTitle('Payment Methods', regularFont: reportRegularFont, boldFont: reportBoldFont),
+                        _pdfHorizontalBarChart(paymentMethods, regularFont: reportRegularFont, boldFont: reportBoldFont, maxBars: 5),
+                      ],
+                    ),
                   ),
-                  _pdfSummaryRow(
-                    uiT('Total Sales'),
-                    _money(totalSales),
-                    regularFont: reportRegularFont,
-                    boldFont: reportBoldFont,
-                  ),
-                  _pdfSummaryRow(
-                    uiT('Expenses'),
-                    _money(expenses),
-                    regularFont: reportRegularFont,
-                    boldFont: reportBoldFont,
-                  ),
-                  _pdfSummaryRow(
-                    uiT('Profit Before Expenses'),
-                    _money(profitBefore),
-                    bold: true,
-                    regularFont: reportRegularFont,
-                    boldFont: reportBoldFont,
-                  ),
-                  _pdfSummaryRow(
-                    uiT('Profit After Expenses'),
-                    _money(profitAfter),
-                    bold: true,
-                    color: profitAfter >= 0
-                        ? PdfColors.green800
-                        : PdfColors.red800,
-                    regularFont: reportRegularFont,
-                    boldFont: reportBoldFont,
+                  pw.SizedBox(width: 22),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _pdfSectionTitle('Expenses', regularFont: reportRegularFont, boldFont: reportBoldFont),
+                        _pdfHorizontalBarChart(expenseBreakdown, regularFont: reportRegularFont, boldFont: reportBoldFont, maxBars: 5, barColor: PdfColors.orange700),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ],
           );
 
-      // Keep the summary on the first page and render sales in bounded chunks.
-      // This is especially important for Yearly mode, where there may be a
-      // large number of saved sales records.
       doc.addPage(
         pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.fromLTRB(28, 32, 28, 28),
-          theme: pw.ThemeData.withFont(
-            base: normalPdfRegular,
-            bold: normalPdfBold,
-          ),
+          pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
+          theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
           header: (_) => reportHeader(),
           footer: reportFooter,
-          build: (_) {
-            final content = <pw.Widget>[
-              summarySection(),
-              pw.SizedBox(height: 20),
-              _pdfReportText(
-                uiT('Sales Detail'),
-                regularFont: reportRegularFont,
-                boldFont: reportBoldFont,
-                fontSize: 13,
-                bold: true,
-              ),
-              pw.SizedBox(height: 6),
-            ];
-
-            if (chunks.isEmpty) {
-              content.add(
-                _pdfReportText(
-                  uiT('No sales recorded for this period.'),
-                  regularFont: reportRegularFont,
-                  boldFont: reportBoldFont,
-                  fontSize: 9,
-                  color: PdfColors.grey700,
-                ),
-              );
-            } else {
-              content.add(
-                _pdfSalesTable(
-                  headers,
-                  chunks.first,
-                  regularFont: reportRegularFont,
-                  boldFont: reportBoldFont,
-                ),
-              );
-            }
-            return content;
-          },
+          build: (_) => [summaryPage()],
         ),
       );
 
-      // Remaining chunks are separate MultiPages. This prevents the PDF
-      // layout engine from materializing the whole yearly table in one go.
-      for (var chunkIndex = 1; chunkIndex < chunks.length; chunkIndex++) {
-        final chunk = chunks[chunkIndex];
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
+          theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+          header: (_) => reportHeader(),
+          footer: reportFooter,
+          build: (_) => [
+            _pdfSectionTitle('Top Products by Revenue', regularFont: reportRegularFont, boldFont: reportBoldFont),
+            _pdfHorizontalBarChart(
+              products.map((e) => MapEntry(e.key, e.value.sales)).toList(),
+              regularFont: reportRegularFont,
+              boldFont: reportBoldFont,
+            ),
+            pw.SizedBox(height: 12),
+            _pdfSectionTitle('Top Products by Profit', regularFont: reportRegularFont, boldFont: reportBoldFont),
+            _pdfHorizontalBarChart(
+              ([...products]..sort((a, b) => b.value.profit.compareTo(a.value.profit)))
+                  .map((e) => MapEntry(e.key, e.value.profit)).toList(),
+              regularFont: reportRegularFont,
+              boldFont: reportBoldFont,
+            ),
+            pw.SizedBox(height: 12),
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _pdfSectionTitle('Top Customers', regularFont: reportRegularFont, boldFont: reportBoldFont),
+                      _pdfHorizontalBarChart(
+                        customers.map((e) => MapEntry(e.key, e.value.sales)).toList(),
+                        regularFont: reportRegularFont,
+                        boldFont: reportBoldFont,
+                        maxBars: 6,
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 24),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _pdfSectionTitle('Outstanding Receivables', regularFont: reportRegularFont, boldFont: reportBoldFont),
+                      _pdfHorizontalBarChart(
+                        ([...customers]..sort((a, b) => b.value.balance.compareTo(a.value.balance)))
+                            .where((e) => e.value.balance > 0.005)
+                            .map((e) => MapEntry(e.key, e.value.balance)).toList(),
+                        regularFont: reportRegularFont,
+                        boldFont: reportBoldFont,
+                        maxBars: 6,
+                        barColor: PdfColors.red700,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      const rowsPerPage = 22;
+      if (sales.isEmpty) {
         doc.addPage(
           pw.MultiPage(
-            pageFormat: PdfPageFormat.a4,
-            margin: const pw.EdgeInsets.fromLTRB(28, 32, 28, 28),
-            theme: pw.ThemeData.withFont(
-              base: normalPdfRegular,
-              bold: normalPdfBold,
-            ),
+            pageFormat: PdfPageFormat.a4.landscape,
+            margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
+            theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
             header: (_) => reportHeader(),
             footer: reportFooter,
             build: (_) => [
+              _pdfSectionTitle('Sales Detail', regularFont: reportRegularFont, boldFont: reportBoldFont),
               _pdfReportText(
-                uiT('Sales Detail (continued)'),
+                uiT('No sales recorded for this period.'),
                 regularFont: reportRegularFont,
                 boldFont: reportBoldFont,
-                fontSize: 13,
-                bold: true,
-              ),
-              pw.SizedBox(height: 6),
-              _pdfSalesTable(
-                headers,
-                chunk,
-                regularFont: reportRegularFont,
-                boldFont: reportBoldFont,
+                fontSize: 9,
+                color: PdfColors.grey700,
               ),
             ],
           ),
         );
+      } else {
+        // Build only one page of string/table data at a time. The old version
+        // materialized the entire period into `rows` and then duplicated it
+        // again into `chunks`, which could consume a surprising amount of RAM.
+        for (var start = 0; start < sales.length; start += rowsPerPage) {
+          final end = (start + rowsPerPage < sales.length)
+              ? start + rowsPerPage
+              : sales.length;
+          final pageSales = sales.sublist(start, end);
+          final pageRows = <List<String>>[];
+
+          for (final sale in pageSales) {
+            final items = AppData.instance.itemsForSale(sale.voucherNumber);
+            final itemsSummary = items.map((i) {
+              final unit = i.saleUnit.trim().isEmpty ? '' : ' ${i.saleUnit}';
+              return '${i.name} x${i.qty}$unit';
+            }).join(', ');
+            final amount = AppData.instance.totalForSale(sale.voucherNumber);
+            final profit = items.fold(0.0, (sum, i) => sum + i.profit);
+            final paid = AppData.instance.paidForSale(sale.voucherNumber);
+            final balance = (amount - paid).clamp(0, double.infinity).toDouble();
+            final status = balance <= 0.005
+                ? 'PAID'
+                : (paid > 0 ? 'PARTIALLY PAID' : 'UNPAID');
+            pageRows.add([
+              _formatDateOnly(sale.date),
+              sale.voucherNumber,
+              sale.customerName.isEmpty ? 'Customer' : sale.customerName,
+              itemsSummary.isEmpty ? '-' : itemsSummary,
+              _money(amount),
+              _money(paid),
+              _money(balance),
+              _money(profit),
+              status,
+            ]);
+          }
+
+          doc.addPage(
+            pw.MultiPage(
+              pageFormat: PdfPageFormat.a4.landscape,
+              margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
+              theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+              header: (_) => reportHeader(),
+              footer: reportFooter,
+              build: (_) => [
+                _pdfSectionTitle(
+                  start == 0 ? 'Sales Detail' : 'Sales Detail (continued)',
+                  regularFont: reportRegularFont,
+                  boldFont: reportBoldFont,
+                ),
+                _pdfSalesTable(
+                  headers,
+                  pageRows,
+                  regularFont: reportRegularFont,
+                  boldFont: reportBoldFont,
+                ),
+              ],
+            ),
+          );
+        }
       }
 
       final bytes = await doc.save();
@@ -5083,9 +5809,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
       debugPrintStack(stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(uiError(e)),
-          ),
+          SnackBar(content: Text(uiError(e))),
         );
       }
     } finally {
@@ -10499,6 +11223,556 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
 // =====================================================================
 // DATA BACKUP
 // =====================================================================
+
+class WifiSyncPage extends StatefulWidget {
+  const WifiSyncPage({super.key, required this.title});
+
+  final String title;
+
+  @override
+  State<WifiSyncPage> createState() => _WifiSyncPageState();
+}
+
+class _WifiSyncPageState extends State<WifiSyncPage> {
+  final TextEditingController _hostController = TextEditingController();
+  final TextEditingController _portController = TextEditingController();
+  final TextEditingController _tokenController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
+
+  List<String> _serverAddresses = const [];
+  bool _loadingAddresses = false;
+
+  WifiSyncManager get _sync => AppData.instance.wifiSync;
+
+  @override
+  void initState() {
+    super.initState();
+    _hostController.text = _sync.clientHost;
+    _portController.text = _sync.mode == WifiSyncMode.server
+        ? _sync.serverPort.toString()
+        : _sync.clientPort.toString();
+    _tokenController.text = _sync.clientToken;
+    _loadAddresses();
+  }
+
+  @override
+  void dispose() {
+    _hostController.dispose();
+    _portController.dispose();
+    _tokenController.dispose();
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAddresses() async {
+    if (_loadingAddresses) return;
+    setState(() => _loadingAddresses = true);
+    try {
+      final addresses = await _sync.localIpv4Addresses();
+      if (mounted) setState(() => _serverAddresses = addresses);
+    } catch (_) {
+      if (mounted) setState(() => _serverAddresses = const []);
+    } finally {
+      if (mounted) setState(() => _loadingAddresses = false);
+    }
+  }
+
+  Future<void> _copy(String text, String message) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT(message))));
+  }
+
+  Future<void> _startServer() async {
+    final port = int.tryParse(_portController.text.trim()) ?? 0;
+    try {
+      await _sync.enableServer(port: port);
+      await _loadAddresses();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(uiT('Wi-Fi server started.'))),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  Future<void> _stopServer() async {
+    await _sync.disable();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _configureClient() async {
+    final host = _hostController.text.trim();
+    final port = int.tryParse(_portController.text.trim()) ?? 0;
+    final token = _tokenController.text.trim();
+    try {
+      await _sync.configureClient(host: host, port: port, token: token);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(uiT('Client settings saved.'))),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  Future<void> _pasteConnectionCode() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final code = data?.text?.trim() ?? '';
+    if (code.isEmpty) return;
+    _codeController.text = code;
+    await _pairFromCode(code);
+  }
+
+  Future<void> _pairFromCode([String? directCode]) async {
+    final code = (directCode ?? _codeController.text).trim();
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(uiT('Paste the server connection code first.'))),
+      );
+      return;
+    }
+
+    try {
+      await _sync.configureClientFromCode(code);
+      final preview = await _sync.pairPreview();
+      if (!mounted) return;
+
+      final local = AppData.instance.snapshotForSync();
+      final hasLocal = _hasMeaningfulData(local);
+      var accepted = true;
+      if (hasLocal) {
+        accepted = await showDialog<bool>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: Text(uiT('First Wi-Fi pairing')),
+                content: Text(
+                  uiT(
+                    'This device already contains POS data. For safety, first pairing replaces this device with the server data. Export a backup first if this device contains anything you need.',
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: Text(uiT('Cancel')),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    child: Text(uiT('Use Server Data')),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+      }
+      if (!accepted) return;
+
+      await _sync.acceptInitialServerSnapshot(preview);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(uiT('Paired successfully. Automatic sync is now enabled.'))),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  Future<void> _syncNow() async {
+    final result = await _sync.syncNow();
+    if (!mounted || result.success) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(uiError(result.message)), backgroundColor: Colors.redAccent),
+    );
+  }
+
+  Future<void> _discover() async {
+    try {
+      final servers = await _sync.discoverServers();
+      if (!mounted) return;
+      if (servers.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(uiT('No POS server was found on this Wi-Fi network.'))),
+        );
+        return;
+      }
+      if (servers.length == 1) {
+        final server = servers.first;
+        final port = server.port;
+        _hostController.text = server.host;
+        _portController.text = port.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(uiF('Found POS server at {host}:{port}. Paste its connection code to pair.', {'host': server.host, 'port': port.toString()}))),
+        );
+        return;
+      }
+      await showModalBottomSheet<void>(
+        context: context,
+        builder: (sheetContext) => SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                child: Text(
+                  uiT('POS servers found'),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              for (final server in servers)
+                ListTile(
+                  leading: const Icon(Icons.wifi),
+                  title: Text(server.name),
+                  subtitle: Text('${server.host}:${server.port}'),
+                  onTap: () {
+                    _hostController.text = server.host;
+                    _portController.text = server.port.toString();
+                    Navigator.pop(sheetContext);
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  bool _hasMeaningfulData(Map<String, dynamic> data) {
+    const sections = [
+      'products',
+      'people',
+      'sales',
+      'saleItems',
+      'incomingSupplies',
+      'paymentTransactions',
+      'expenses',
+      'incomeExpense',
+      'cylinderCycles',
+    ];
+    return sections.any((key) => (data[key] as List?)?.isNotEmpty == true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<WifiSyncViewState>(
+      valueListenable: _sync.status,
+      builder: (context, status, _) {
+        final isServer = status.mode == WifiSyncMode.server;
+        final isClient = status.mode == WifiSyncMode.client;
+        final connectionHost = _serverAddresses.isEmpty ? '' : _serverAddresses.first;
+        final connectionCode = isServer && connectionHost.isNotEmpty
+            ? _sync.connectionCodeFor(connectionHost)
+            : '';
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(uiT(widget.title)),
+            backgroundColor: PosDashboardScreen.primaryGreen,
+            foregroundColor: Colors.white,
+          ),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isServer
+                            ? Icons.router
+                            : isClient
+                                ? Icons.devices_other
+                                : Icons.wifi_off,
+                        size: 34,
+                        color: PosDashboardScreen.primaryGreen,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isServer
+                                  ? uiT('Server mode')
+                                  : isClient
+                                      ? uiT('Client mode')
+                                      : uiT('Wi-Fi sync is off'),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              status.error.isNotEmpty
+                                  ? uiT(status.error)
+                                  : uiT(status.message.isEmpty ? 'Ready.' : status.message),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (status.busy) const SizedBox(width: 12, child: CircularProgressIndicator()),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<WifiSyncMode>(
+                segments: [
+                  ButtonSegment(value: WifiSyncMode.off, label: Text(uiT('Off')), icon: const Icon(Icons.wifi_off)),
+                  ButtonSegment(value: WifiSyncMode.server, label: Text(uiT('Server')), icon: const Icon(Icons.router)),
+                  ButtonSegment(value: WifiSyncMode.client, label: Text(uiT('Client')), icon: const Icon(Icons.devices_other)),
+                ],
+                selected: {status.mode},
+                onSelectionChanged: (values) async {
+                  final next = values.first;
+                  try {
+                    if (next == WifiSyncMode.off) {
+                      await _sync.disable();
+                    } else if (next == WifiSyncMode.server) {
+                      final port = int.tryParse(_portController.text.trim()) ?? _sync.serverPort;
+                      await _sync.enableServer(port: port);
+                      await _loadAddresses();
+                    } else {
+                      await _configureClient();
+                    }
+                  } catch (e) {
+                    rootScaffoldMessengerKey.currentState?.showSnackBar(
+                      SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+
+              if (isServer) ...[
+                Text(uiT('Server settings'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _portController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: uiT('Port'),
+                    border: const OutlineInputBorder(),
+                    helperText: uiT('Use the same Wi-Fi network on every POS device.'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (_loadingAddresses)
+                  const LinearProgressIndicator()
+                else if (_serverAddresses.isEmpty)
+                  Text(uiT('No local IPv4 address was found yet.'))
+                else ...[
+                  Text(uiT('Connect using one of these server addresses:')),
+                  const SizedBox(height: 6),
+                  for (final address in _serverAddresses)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.lan_outlined),
+                      title: Text('$address:${_sync.serverPort}'),
+                      trailing: IconButton(
+                        tooltip: uiT('Copy'),
+                        onPressed: () => _copy('$address:${_sync.serverPort}', 'Server address copied.'),
+                        icon: const Icon(Icons.copy),
+                      ),
+                    ),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: status.serverRunning ? null : _startServer,
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text(uiT('Start Server')),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: status.serverRunning ? _stopServer : null,
+                        icon: const Icon(Icons.stop),
+                        label: Text(uiT('Stop')),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (connectionCode.isNotEmpty) ...[
+                  Text(uiT('Connection code'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  SelectableText(connectionCode),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _copy(connectionCode, 'Connection code copied.'),
+                          icon: const Icon(Icons.copy_all),
+                          label: Text(uiT('Copy Code')),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: connectionHost.isEmpty
+                              ? null
+                              : () => showDialog<void>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: Text(uiT('Scan this code on another device')),
+                                      content: SizedBox(
+                                        width: 260,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            QrImageView(data: connectionCode, size: 220),
+                                            const SizedBox(height: 8),
+                                            SelectableText(connectionCode, textAlign: TextAlign.center),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                          icon: const Icon(Icons.qr_code_2),
+                          label: Text(uiT('Show QR')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Text(uiF('Paired devices seen: {count}', {'count': status.knownClients.toString()})),
+              ],
+
+              if (isClient) ...[
+                Text(uiT('Client connection'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _hostController,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(labelText: uiT('Server IP address'), border: const OutlineInputBorder()),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _portController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: uiT('Port'), border: const OutlineInputBorder()),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _tokenController,
+                  obscureText: true,
+                  decoration: InputDecoration(labelText: uiT('Pairing token'), border: const OutlineInputBorder()),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _codeController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: uiT('Connection code from server'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _pasteConnectionCode,
+                      icon: const Icon(Icons.content_paste),
+                      label: Text(uiT('Paste & Pair')),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _discover,
+                      icon: const Icon(Icons.radar),
+                      label: Text(uiT('Find Server')),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _configureClient,
+                      icon: const Icon(Icons.save_outlined),
+                      label: Text(uiT('Save Connection')), 
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  value: _sync.autoSync,
+                  onChanged: (value) async {
+                    await _sync.setAutoSync(value);
+                    if (mounted) setState(() {});
+                  },
+                  title: Text(uiT('Automatic synchronization')), 
+                  subtitle: Text(uiT('Retries automatically after Wi-Fi reconnects while the POS app is running.')),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: status.busy ? null : _syncNow,
+                        icon: const Icon(Icons.sync),
+                        label: Text(uiT('Sync Now')),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _pairFromCode,
+                        icon: const Icon(Icons.link),
+                        label: Text(uiT('Pair / Re-pair')),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (status.lastSync != null)
+                  Text(uiF('Last sync: {time}', {'time': status.lastSync!.toLocal().toString()})),
+                if (status.pending)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(uiT('Local changes are waiting to sync.'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                if (status.conflicts > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      uiF('Last sync resolved {count} conflict(s) using the server copy for conflicting non-stock fields.', {'count': status.conflicts.toString()}),
+                    ),
+                  ),
+              ],
+
+              if (!isServer && !isClient) ...[
+                const SizedBox(height: 8),
+                Text(
+                  uiT('Choose Server on the main POS device. Choose Client on additional devices. After first pairing, the client stores its secure pairing information and automatically reconnects when the Wi-Fi server becomes reachable again.'),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
 
 class DataBackupPage extends StatefulWidget {
   const DataBackupPage({super.key, required this.title});
