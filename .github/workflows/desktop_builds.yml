@@ -12,8 +12,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
-        target: [windows, macos, linux, ios]
+        target: [windows, macos, linux, ios, android]
         include:
           - target: windows
             os: windows-latest
@@ -23,6 +24,8 @@ jobs:
             os: ubuntu-latest
           - target: ios
             os: macos-latest
+          - target: android
+            os: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -35,6 +38,7 @@ jobs:
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
 
       - name: Set up Java
+        if: matrix.target == 'android'
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -51,46 +55,46 @@ jobs:
 
       # ==================== COMPILATION STEPS ====================
 
-      # 1. WINDOWS: Generate Self-Signed Cert, Build, and Package into .msix
-      # 1. WINDOWS: Generate Self-Signed Cert, Build, and Package into .msix
-      # 1. WINDOWS: Generate Self-Signed Cert, Build, and Package into .msix
+      # 1. WINDOWS: Build, Generate Cert, and Package MSIX
       - name: Build and Package Windows (Self-Signed)
         if: matrix.target == 'windows'
         shell: powershell
         run: |
           flutter build windows --release
-          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=LPG-POS-System, O=KyalSinLayEnergy&Tech" -KeyUsage DigitalSignature -FriendlyName "Flutter App Dev Cert" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+          dart pub global activate msix
+          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=LPG-POS-System, O=KyalSinLayEnergyAndTech" -KeyUsage DigitalSignature -FriendlyName "Flutter App Dev Cert" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
           $password = ConvertTo-SecureString -String "SelfSigned123!" -Force -AsPlainText
+          New-Item -ItemType Directory -Force -Path "build\windows"
           Export-PfxCertificate -Cert $cert -FilePath "build\windows\self_signed.pfx" -Password $password
-          dart run msix:create --certificate-path "build\windows\self_signed.pfx" --certificate-password "SelfSigned123!" --publisher "CN=LPG-POS-System, O=KyalSinLayEnergy&Tech" --install-certificate false
+          dart run msix:create --certificate-path "build\windows\self_signed.pfx" --certificate-password "SelfSigned123!" --publisher "CN=LPG-POS-System, O=KyalSinLayEnergyAndTech" --install-certificate false
 
-      # 2. MACOS: Build raw app, install dmg packaging tool, and convert to .dmg
+      # 2. MACOS: Build raw app and package into .dmg
       - name: Build and Package macOS
         if: matrix.target == 'macos'
         run: |
           flutter build macos --release
           npm install -g create-dmg
-          cd build/macos/Build/Products/Release/
-          create-dmg *.app || true
+          APP_PATH=$(find build/macos/Build/Products/Release -name "*.app" -maxdepth 1)
+          create-dmg "$APP_PATH" build/macos/Build/Products/Release/ || true
 
-      # 3. LINUX: Standard build (Outputs runnable binary folder)
+      # 3. LINUX: Standard release build
       - name: Build Linux
         if: matrix.target == 'linux'
         run: flutter build linux --release
 
-      # 4. IOS: Standard no-codesign build
+      # 4. IOS: No-codesign runner build
       - name: Build iOS
         if: matrix.target == 'ios'
         run: flutter build ios --release --no-codesign
 
-      # 5. ANDROID: Standard build
+      # 5. ANDROID: Build release APK
       - name: Build Android
-        if: matrix.target == 'ios'
+        if: matrix.target == 'android'
         run: flutter build apk --release
 
-      # ==================== UPLOAD CUSTOMER FILES ====================
+      # ==================== UPLOAD ARTIFACTS ====================
 
-      - name: Upload Clean Installers & Apps
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}-customer-installer
@@ -100,3 +104,5 @@ jobs:
             build/macos/Build/Products/Release/*.dmg
             build/linux/x64/release/bundle/
             build/ios/iphoneos/
+            build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: ignore
