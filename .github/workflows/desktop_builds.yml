@@ -51,12 +51,23 @@ jobs:
 
       # ==================== COMPILATION STEPS ====================
 
-      # 1. WINDOWS: Build and automatically package into a single .msix installer
-      - name: Build and Package Windows
+      # 1. WINDOWS: Generate Self-Signed Cert, Build, and Package into .msix
+      - name: Build and Package Windows (Self-Signed)
         if: matrix.target == 'windows'
+        shell: powershell
         run: |
+          # Step A: Compile release app
           flutter build windows --release
-          dart run msix:create
+
+          # Step B: Create Self-Signed Certificate
+          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=MySelfSignedApp, O=MyCompany" -KeyUsage DigitalSignature -FriendlyName "Flutter App Dev Cert" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+          $password = ConvertTo-SecureString -String "SelfSigned123!" -Force -AsPlainText
+          
+          # Step C: Export certificate to .pfx file
+          Export-PfxCertificate -Cert $cert -FilePath "build\windows\self_signed.pfx" -Password $password
+
+          # Step D: Package MSIX using the self-signed certificate
+          dart run msix:create --certificate-path "build\windows\self_signed.pfx" --certificate-password "SelfSigned123!" --publisher "CN=MySelfSignedApp, O=MyCompany"
 
       # 2. MACOS: Build raw app, install dmg packaging tool, and convert to .dmg
       - name: Build and Package macOS
@@ -65,8 +76,7 @@ jobs:
           flutter build macos --release
           npm install -g create-dmg
           cd build/macos/Build/Products/Release/
-          create-dmg *.app || true 
-          # Note: '|| true' ensures it passes even if UI background styling warnings appear
+          create-dmg *.app || true
 
       # 3. LINUX: Standard build (Outputs runnable binary folder)
       - name: Build Linux
@@ -86,6 +96,7 @@ jobs:
           name: ${{ matrix.target }}-customer-installer
           path: |
             build/windows/x64/runner/Release/*.msix
+            build/windows/self_signed.pfx
             build/macos/Build/Products/Release/*.dmg
             build/linux/x64/release/bundle/
             build/ios/iphoneos/

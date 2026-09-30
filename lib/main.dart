@@ -9484,8 +9484,11 @@ class CylinderCyclesPage extends StatefulWidget {
 class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
   final TextEditingController _givenController = TextEditingController();
   final TextEditingController _receivedController = TextEditingController();
+  final TextEditingController _customerSearchController =
+      TextEditingController();
 
   String? _selectedCustomer;
+  String _customerSearchQuery = '';
   String? _selectedTypeId;
   DateTime _cycleDate = DateTime.now();
 
@@ -9493,6 +9496,7 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
   void dispose() {
     _givenController.dispose();
     _receivedController.dispose();
+    _customerSearchController.dispose();
     super.dispose();
   }
 
@@ -10266,9 +10270,75 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
       );
     }
 
+    final query = _customerSearchQuery.trim().toLowerCase();
+    final filteredCustomers = query.isEmpty
+        ? customers
+        : customers.where((customer) {
+            final name = customer.name.toLowerCase();
+            final phone = customer.phone.toLowerCase();
+            return name.contains(query) || phone.contains(query);
+          }).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: customers.map((customer) => _customerOverviewCard(customer.name)).toList(),
+      children: [
+        TextField(
+          controller: _customerSearchController,
+          onChanged: (value) {
+            setState(() {
+              _customerSearchQuery = value.trim().toLowerCase();
+            });
+          },
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: uiT('Search customer name or phone'),
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _customerSearchQuery.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: uiT('Clear search'),
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _customerSearchController.clear();
+                      setState(() => _customerSearchQuery = '');
+                    },
+                  ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (filteredCustomers.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                children: [
+                  const Icon(Icons.search_off, size: 40, color: Colors.black45),
+                  const SizedBox(height: 8),
+                  Text(
+                    uiT('No customers match your search.'),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    uiT('Try another customer name or phone number.'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...filteredCustomers.map(
+            (customer) => _customerOverviewCard(customer.name),
+          ),
+      ],
     );
   }
 
