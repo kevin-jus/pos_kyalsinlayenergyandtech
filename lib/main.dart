@@ -11311,6 +11311,18 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
     final port = int.tryParse(_portController.text.trim()) ?? 0;
     final token = _tokenController.text.trim();
     try {
+      if (host.isEmpty || token.isEmpty) {
+        await _sync.enableClient();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              uiT('Client mode is ready. Enter the server connection code, or enter the server IP and pairing token, then pair.'),
+            ),
+          ),
+        );
+        return;
+      }
       await _sync.configureClient(host: host, port: port, token: token);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -11550,7 +11562,11 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                       await _sync.enableServer(port: port);
                       await _loadAddresses();
                     } else {
-                      await _configureClient();
+                      // Do not try to validate an IP/token merely because the
+                      // user switched to Client mode. Empty fields are normal
+                      // on first setup. The user can paste the server code or
+                      // enter the address below, then explicitly pair.
+                      await _sync.enableClient();
                     }
                   } catch (e) {
                     rootScaffoldMessengerKey.currentState?.showSnackBar(
@@ -11667,7 +11683,11 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                 TextField(
                   controller: _hostController,
                   keyboardType: TextInputType.url,
-                  decoration: InputDecoration(labelText: uiT('Server IP address'), border: const OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: uiT('Server IP address'),
+                    hintText: 'Example: 192.168.1.20',
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(

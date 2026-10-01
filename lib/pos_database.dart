@@ -34,10 +34,17 @@ class PosDatabase {
     final directory = await getApplicationSupportDirectory();
     final dbPath = '${directory.path}/$_fileName';
 
+    // Android/iOS use the native sqflite plugin. The FFI factory is only used
+    // on desktop platforms where sqflite itself does not provide a database
+    // implementation. The Wi-Fi sync server/client never shares this SQLite
+    // file over the network. Each device keeps its own local database so it
+    // can continue operating while offline.
     sql.DatabaseFactory factory;
-    if (Platform.isLinux || Platform.isWindows) {
+    if (Platform.isWindows || Platform.isLinux) {
       ffi_sql.sqfliteFfiInit();
       factory = ffi_sql.databaseFactoryFfi;
+    } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+      factory = sql.databaseFactory;
     } else {
       factory = sql.databaseFactory;
     }
@@ -57,10 +64,11 @@ class PosDatabase {
       ),
     );
 
-    // WAL lets SQLite handle reporting reads without making ordinary writes
-    // wait behind a long read. It is supported by the native/FFI SQLite builds.
-    await database.execute('PRAGMA journal_mode = WAL');
-    await database.execute('PRAGMA synchronous = NORMAL');
+    // Do not issue `PRAGMA journal_mode = WAL` here. Android's sqflite
+    // backend treats that particular PRAGMA differently from ordinary
+    // execute() statements and can report SQLITE_OK as a query-method error.
+    // Android WAL is configured in the manifest when desired; SQLite also works
+    // correctly without WAL, which keeps startup reliable across platforms.
   }
 
   Future<void> close() async {

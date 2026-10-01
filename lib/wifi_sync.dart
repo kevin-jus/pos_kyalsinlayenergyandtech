@@ -267,6 +267,26 @@ class WifiSyncManager with WidgetsBindingObserver {
     }
   }
 
+  Future<void> enableClient({bool persist = true}) async {
+    await _stopServer();
+    mode = WifiSyncMode.client;
+    _startAutoTimer();
+    if (persist) await _saveState();
+    _setStatus(
+      status.value.copyWith(
+        mode: WifiSyncMode.client,
+        serverRunning: false,
+        clientConnected: false,
+        busy: false,
+        pending: baseSnapshot == null,
+        error: '',
+        message: baseSnapshot == null
+            ? 'Client mode is ready. Enter the server connection code or server IP.'
+            : 'Client mode is ready. Automatic synchronization will reconnect when the server is reachable.',
+      ),
+    );
+  }
+
   Future<void> configureClient({
     required String host,
     required int port,
@@ -932,13 +952,96 @@ class WifiSyncManager with WidgetsBindingObserver {
   }
 
   Future<WifiDiscoveredServer?> _discoverMatchingServer() async {
-    final servers = await discoverServers();
+    final discovered = await discoverServers();
+    final servers = <WifiDiscoveredServer>[...discovered];
+
+    // Some Android routers/APs filter UDP broadcasts between Wi-Fi clients.
+    // Fall back to a small TCP scan of the local IPv4 subnet and ask each
+    // candidate for /hello. This is only used when broadcast discovery found
+    // nothing, so normal discovery stays fast.
+    if (servers.isEmpty) {
+      servers.addAll(await _scanLocalSubnets());
+    }
+
     if (servers.isEmpty) return null;
     if (clientServerId.isEmpty) return servers.first;
     for (final server in servers) {
       if (server.serverId == clientServerId) return server;
     }
     return null;
+  }
+
+  Future<List<WifiDiscoveredServer>> _scanLocalSubnets() async {
+    final localAddresses = await localIpv4Addresses();
+    final candidateHosts = <String>{};
+
+    for (final address in localAddresses) {
+      final parts = address.split('.');
+      if (parts.length != 4) continue;
+      final a = int.tryParse(parts[0]);
+      final b = int.tryParse(parts[1]);
+      final c = int.tryParse(parts[2]);
+      if (a == null || b == null || c == null) continue;
+      final privateSubnet = a == 10 ||
+          (a == 192 && b == 168) ||
+          (a == 172 && b >= 16 && b <= 31);
+      if (!privateSubnet) continue;
+      for (var host = 1; host <= 254; host++) {
+        final candidate = '$a.$b.$c.$host';
+        if (candidate != address) candidateHosts.add(candidate);
+      }
+    }
+
+    final found = <String, WifiDiscoveredServer>{};
+    final hosts = candidateHosts.toList();
+    const batchSize = 32;
+    for (var i = 0; i < hosts.length; i += batchSize) {
+      final end = (i + batchSize).clamp(0, hosts.length).toInt();
+      final batch = hosts.sublist(i, end);
+      final results = await Future.wait(
+        batch.map(_probeServerHost),
+      );
+      for (final server in results) {
+        if (server == null) continue;
+        found['${server.serverId}@${server.host}:${server.port}'] = server;
+      }
+      if (clientServerId.isNotEmpty &&
+          found.values.any((s) => s.serverId == clientServerId)) {
+        break;
+      }
+    }
+    return found.values.toList();
+  }
+
+  Future<WifiDiscoveredServer?> _probeServerHost(String host) async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(milliseconds: 350)
+      ..idleTimeout = const Duration(milliseconds: 500);
+    try {
+      final request = await client
+          .get(host, _defaultSyncPort, '/hello')
+          .timeout(const Duration(milliseconds: 600));
+      final response = await request.close().timeout(
+        const Duration(milliseconds: 900),
+      );
+      if (response.statusCode != HttpStatus.ok) return null;
+      final raw = await response.fold<List<int>>(<int>[], (a, b) => a..addAll(b));
+      if (raw.isEmpty) return null;
+      final decoded = jsonDecode(utf8.decode(raw));
+      if (decoded is! Map || decoded['ok'] != true) return null;
+      final server = WifiDiscoveredServer(
+        host: host,
+        port: _intValue(decoded['port'], _defaultSyncPort),
+        serverId: decoded['serverId']?.toString() ?? '',
+        name: decoded['name']?.toString() ?? 'POS Server',
+      );
+      if (server.serverId.isEmpty) return null;
+      return server;
+    } catch (_) {
+      return null;
+    } finally {
+      client.close(force: true);
+    }
   }
 
   Future<void> _ensureClientHost() async {
