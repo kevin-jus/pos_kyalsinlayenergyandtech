@@ -2,9 +2,9 @@ name: Build Desktop and Mobile Applications
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, test-branch ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, test-branch ]
 
 jobs:
   build:
