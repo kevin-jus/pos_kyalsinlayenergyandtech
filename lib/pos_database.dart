@@ -77,6 +77,16 @@ class PosDatabase {
     if (db != null) await db.close();
   }
 
+  /// SQLite's built-in structural verification. It is deliberately run before
+  /// restoring application state so a damaged database is never overwritten.
+  Future<void> verifyIntegrity() async {
+    final rows = await database.rawQuery('PRAGMA integrity_check');
+    final result = rows.isEmpty ? '' : rows.first.values.first?.toString() ?? '';
+    if (result.toLowerCase() != 'ok') {
+      throw StateError('Database integrity check failed: $result');
+    }
+  }
+
   Future<void> _createSchema(sql.Database db) async {
     await db.execute('''
       CREATE TABLE products (

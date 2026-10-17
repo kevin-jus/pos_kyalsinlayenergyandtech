@@ -1531,6 +1531,8 @@ bool _isListSection(String key) => const {
       'cylinderRows',
       'cylinderTypes',
       'cylinderCycles',
+      'securityUsers',
+      'securityAudit',
     }.contains(key);
 
 Object _mergeListSection({
@@ -1770,6 +1772,9 @@ String _recordKey(String section, dynamic item, int index) {
     case 'cylinderRows':
       return j['no']?.toString() ?? '__index_$index';
     case 'cylinderTypes':
+      return j['id']?.toString().trim() ?? '__index_$index';
+    case 'securityUsers':
+    case 'securityAudit':
       return j['id']?.toString().trim() ?? '__index_$index';
     case 'cylinderCycles':
       return j['id']?.toString().trim() ?? '__index_$index';

@@ -19,6 +19,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:gal/gal.dart';
 import 'ui_translation.dart';
 import 'wifi_sync.dart';
+import 'security.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
@@ -26,7 +27,9 @@ final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await UiTranslation.load();
+  await SecurityManager.instance.initialize();
   await AppData.instance.load();
+  SecurityManager.instance.onSyncableChange = AppData.instance.notifySecurityChanged;
   await AppData.instance.wifiSync.initialize();
   runApp(const MyApp());
 }
@@ -69,7 +72,7 @@ class MyApp extends StatelessWidget {
           'sans-serif',
         ],
       ),
-      home: const PosDashboardScreen(),
+      home: const SecurityGate(child: PosDashboardScreen()),
     );
   }
 }
@@ -658,7 +661,7 @@ class AppData {
   AppData._internal() {
     _ensureDefaultCylinderTypes();
     wifiSync = WifiSyncManager(
-      readLocalSnapshot: () async => _snapshot(),
+      readLocalSnapshot: () async => snapshotForSync(),
       applyRemoteSnapshot: replaceSnapshotFromSync,
       getLocalUserRevision: () async => _localUserRevision,
     );
@@ -775,7 +778,16 @@ class AppData {
 
   /// Public bridge used by the Wi-Fi synchronization layer. SQLite is updated
   /// first; the in-memory model changes only after the durable write succeeds.
-  Map<String, dynamic> snapshotForSync() => _snapshot();
+  Map<String, dynamic> snapshotForSync() => {
+        ..._snapshot(),
+        ...SecurityManager.instance.syncSnapshot(),
+      };
+
+  /// Called when users/roles/PINs or the admin log change locally.
+  void notifySecurityChanged() {
+    _localUserRevision++;
+    wifiSync.notifyLocalDataChanged();
+  }
 
   Future<void> replaceSnapshotFromSync(Map<String, dynamic> snapshot) async {
     final parsed = _parseIntoTemporary(jsonEncode(snapshot));
@@ -787,6 +799,7 @@ class AppData {
 
     _saveChain = operation.then<void>((_) {}, onError: (_) {});
     await operation;
+    await SecurityManager.instance.applySyncSnapshot(snapshot);
   }
 
   AppData _parseIntoTemporary(String raw) {
@@ -1242,6 +1255,7 @@ class AppData {
 
     try {
       await _database.open();
+      await _database.verifyIntegrity();
 
       // SQLite is now the primary store. If this is a fresh database, migrate
       // the existing SharedPreferences JSON once and leave it untouched as a
@@ -1295,6 +1309,26 @@ class AppData {
 
   String exportJson() =>
       const JsonEncoder.withIndent('  ').convert(_snapshot());
+
+  /// Portable backups are encrypted with AES-GCM using the device key kept in
+  /// the OS keychain/keystore. They intentionally cannot be opened as plain
+  /// JSON if copied from the device.
+  Future<String> exportSecureBackup() async => jsonEncode({
+        'format': 'kyal-sin-lay-secure-backup',
+        'version': 1,
+        'createdAt': DateTime.now().toIso8601String(),
+        'payload': await SecureVault.instance.encrypt(exportJson(), aad: 'pos-backup-v1'),
+      });
+
+  Future<void> importBackup(String raw) async {
+    final decoded = jsonDecode(raw.trim());
+    if (decoded is Map && decoded['format'] == 'kyal-sin-lay-secure-backup') {
+      final payload = decoded['payload'];
+      if (payload is! String) throw const FormatException('Secure backup payload is missing.');
+      raw = await SecureVault.instance.decrypt(payload, aad: 'pos-backup-v1');
+    }
+    await importJson(raw);
+  }
 
   Future<void> importJson(String raw) async {
     // Parse the complete backup into an isolated object first. The live state
@@ -1939,6 +1973,9 @@ class AppData {
 
   // ---- Sales ----
   Future<void> addSale(Sale sale, List<SaleItem> items) async {
+    if (!SecurityManager.instance.can(PosPermission.sell)) {
+      throw StateError('Your account is not permitted to record sales.');
+    }
     if (items.isEmpty) {
       throw StateError('A sale must contain at least one item.');
     }
@@ -2048,6 +2085,7 @@ class AppData {
     )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
+    await SecurityManager.instance.log('Sale recorded', detail: '${sale.voucherNumber} • ${items.length} item(s)');
   }
 
   Future<void> addVoucher(Sale sale, List<SaleItem> items) =>
@@ -2061,6 +2099,9 @@ class AppData {
     String? customer,
     DateTime? paymentDate,
   }) async {
+    if (!SecurityManager.instance.can(PosPermission.savedSaleChange)) {
+      throw StateError('Only Owner or Admin can change a saved sale.');
+    }
     final idx = sales.indexWhere((s) => s.voucherNumber == voucherNumber);
     if (idx < 0) return;
     final sale = sales[idx];
@@ -2101,9 +2142,13 @@ class AppData {
     )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
+    await SecurityManager.instance.log('Saved sale changed', detail: '$voucherNumber • payment $current → $target');
   }
 
-  Future<void> deleteSale(String voucherNumber) async {
+  Future<void> deleteSale(String voucherNumber, {bool approved = false}) async {
+    if (!SecurityManager.instance.can(PosPermission.saleDelete) && !approved) {
+      throw StateError('Owner or Admin approval is required to delete a sale.');
+    }
     final items = itemsForSale(voucherNumber);
     for (final item in items) {
       Product? inventoryProduct;
@@ -2150,9 +2195,11 @@ class AppData {
     )) {
       throw StateError('Data could not be saved. Your previous saved data was kept.');
     }
+    await SecurityManager.instance.log('Sale deleted', detail: voucherNumber);
   }
 
-  Future<void> deleteVoucher(String voucherNumber) => deleteSale(voucherNumber);
+  Future<void> deleteVoucher(String voucherNumber, {bool approved = false}) =>
+      deleteSale(voucherNumber, approved: approved);
 
   List<SaleItem> itemsForSale(String voucherNumber) =>
       saleItems.where((i) => i.saleVoucherNumber == voucherNumber).toList();
@@ -2503,6 +2550,18 @@ class PosDashboardScreen extends StatelessWidget {
   static const Color textColor = Colors.black87;
 
   void _openPage(BuildContext context, String pageKey) {
+    final permission = switch (pageKey) {
+      'Products' || 'Instock Products' || 'Incoming Products' || 'Cylinder Cycles' || 'Cylinder Types' => PosPermission.inventory,
+      'Customer' => PosPermission.customers,
+      'Sales Report' || 'Pay Yan' || 'Ya Yan' || 'Income/Expense' => PosPermission.reports,
+      'Data Backup' => PosPermission.exportData,
+      'Wi-Fi Sync' || 'Security Center' => PosPermission.security,
+      _ => null,
+    };
+    if (permission != null && !SecurityManager.instance.can(permission)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your role does not have access to this area.')));
+      return;
+    }
     late final Widget targetScreen;
 
     switch (pageKey) {
@@ -2547,6 +2606,15 @@ class PosDashboardScreen extends StatelessWidget {
         break;
       case 'Cylinder Types':
         targetScreen = const CylinderTypesPage(title: 'Cylinder Types');
+        break;
+      case 'Security Center':
+        targetScreen = SecurityCenterPage(
+          wifiSync: AppData.instance.wifiSync,
+          onOpenWifiSync: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const WifiSyncPage(title: 'Wi-Fi Sync')),
+          ),
+        );
         break;
       default:
         return;
@@ -2607,6 +2675,7 @@ class PosDashboardScreen extends StatelessWidget {
                   ],
                 ),
                 actions: [
+                  IconButton(tooltip: 'Sign out', icon: const Icon(Icons.logout), onPressed: SecurityManager.instance.logout),
                   IconButton(
                     tooltip: UiTranslation.languageButtonTooltip,
                     icon: const Icon(Icons.translate),
@@ -2720,6 +2789,14 @@ class PosDashboardScreen extends StatelessWidget {
                           pageKey: 'Wi-Fi Sync',
                           labelKey: 'Wi-Fi Sync',
                           icon: Icons.wifi_find_outlined,
+                        ),
+                      ),
+                      _buildDrawerItem(
+                        context,
+                        const _DashboardPageButton(
+                          pageKey: 'Security Center',
+                          labelKey: 'Security Center',
+                          icon: Icons.admin_panel_settings_outlined,
                         ),
                       ),
                     ],
@@ -3066,6 +3143,8 @@ class YaYanPage extends StatefulWidget {
 }
 
 class _YaYanPageState extends State<YaYanPage> {
+  String _searchQuery = '';
+
   Future<void> _receive(Sale sale) async {
     final total = AppData.instance.totalForSale(sale.voucherNumber);
     final currentPaid = AppData.instance.paidForSale(sale.voucherNumber);
@@ -3168,28 +3247,141 @@ class _YaYanPageState extends State<YaYanPage> {
     );
   }
 
-  @override Widget build(BuildContext context) {
-    final sales = AppData.instance.sales.where((s) => AppData.instance.totalForSale(s.voucherNumber) - AppData.instance.paidForSale(s.voucherNumber) > .005).toList()..sort((a,b) => b.date.compareTo(a.date));
-    final total = sales.fold(0.0, (sum,s) => sum + (AppData.instance.totalForSale(s.voucherNumber) - AppData.instance.paidForSale(s.voucherNumber)).clamp(0, double.infinity).toDouble());
-    return Scaffold(appBar: AppBar(title: Text(uiT(widget.title)), backgroundColor: PosDashboardScreen.primaryGreen, foregroundColor: Colors.white), body: Column(children: [
-      _ledgerTotal(uiF('Total to Receive: {amount}', {'amount': total.toStringAsFixed(2)}), Colors.teal),
-      Expanded(child: sales.isEmpty ? Center(child: Text(uiT('Nothing to receive. All customer balances are settled.'))) : ListView.builder(itemCount: sales.length, itemBuilder: (_,i) {
-        final s=sales[i];
-        final total=AppData.instance.totalForSale(s.voucherNumber);
-        final paid=AppData.instance.paidForSale(s.voucherNumber);
-        final balance=(total-paid).clamp(0,double.infinity).toDouble();
-        return ListTile(
-          leading: const Icon(Icons.arrow_downward, color: Colors.teal),
-          title: Text(s.customer.isEmpty ? uiT('Customer') : s.customer),
-          subtitle: Text('${uiF('Voucher {voucher} • {date}', {'voucher': s.voucherNumber, 'date': _formatDateOnly(s.date)})}\n${uiF('Paid {paid} / {total} • Balance {balance}', {'paid': paid.toStringAsFixed(2), 'total': total.toStringAsFixed(2), 'balance': balance.toStringAsFixed(2)})}'),
-          isThreeLine: true,
-          trailing: Wrap(spacing: 4, children: [
-            IconButton(onPressed: () => _history(s), icon: const Icon(Icons.history), tooltip: uiT('Payment history')),
-            FilledButton(onPressed: () => _receive(s), child: Text(uiT('Receive'))),
-          ]),
-        );
-      }))
-    ]));
+  @override
+  Widget build(BuildContext context) {
+    // Keep only vouchers that still have money outstanding, newest first.
+    final sales = AppData.instance.sales
+        .where((s) => AppData.instance.totalForSale(s.voucherNumber) - AppData.instance.paidForSale(s.voucherNumber) > .005)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    final total = sales.fold<double>(
+      0,
+      (sum, s) => sum + (AppData.instance.totalForSale(s.voucherNumber) - AppData.instance.paidForSale(s.voucherNumber)).clamp(0, double.infinity).toDouble(),
+    );
+
+    // Group by normalized customer/store name so repeated visits to the same
+    // shop appear together even if the name was entered with different casing.
+    final groupedSales = <String, List<Sale>>{};
+    final groupNames = <String, String>{};
+    for (final sale in sales) {
+      final name = sale.customer.trim().isEmpty ? uiT('Customer') : sale.customer.trim();
+      final key = name.toLowerCase();
+      groupedSales.putIfAbsent(key, () => <Sale>[]).add(sale);
+      groupNames.putIfAbsent(key, () => name);
+    }
+
+    final groupKeys = groupedSales.keys.toList();
+    final normalizedQuery = _searchQuery.trim().toLowerCase();
+    final visibleGroupKeys = groupKeys
+        .where((key) => groupNames[key]!.toLowerCase().contains(normalizedQuery))
+        .toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(uiT(widget.title)),
+        backgroundColor: PosDashboardScreen.primaryGreen,
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          _ledgerTotal(
+            uiF('Total to Receive: {amount}', {'amount': total.toStringAsFixed(2)}),
+            Colors.teal,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: TextField(
+              onChanged: (value) => setState(() => _searchQuery = value),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: uiT('Search by store name'),
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ),
+          Expanded(
+            child: sales.isEmpty
+                ? Center(child: Text(uiT('Nothing to receive. All customer balances are settled.')))
+                : visibleGroupKeys.isEmpty
+                    ? Center(child: Text(uiT('No stores match your search.')))
+                    : ListView.builder(
+                    itemCount: visibleGroupKeys.length,
+                    itemBuilder: (context, index) {
+                      final key = visibleGroupKeys[index];
+                      final storeSales = groupedSales[key]!;
+                      final storeName = groupNames[key]!;
+                      final storeBalance = storeSales.fold<double>(
+                        0,
+                        (sum, sale) => sum + (AppData.instance.totalForSale(sale.voucherNumber) - AppData.instance.paidForSale(sale.voucherNumber)).clamp(0, double.infinity).toDouble(),
+                      );
+                      final voucherCountLabel = storeSales.length == 1
+                          ? uiT('1 outstanding voucher')
+                          : uiF('{count} outstanding vouchers', {'count': storeSales.length.toString()});
+                      final storeBalanceLabel = uiF(
+                        'Balance {balance}',
+                        {'balance': storeBalance.toStringAsFixed(2)},
+                      );
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        clipBehavior: Clip.antiAlias,
+                        child: ExpansionTile(
+                          key: PageStorageKey<String>('yayan-store-$key'),
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0x1A009688),
+                            child: Icon(Icons.storefront_outlined, color: Colors.teal),
+                          ),
+                          title: Text(storeName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text('$voucherCountLabel • $storeBalanceLabel'),
+                          children: [
+                            const Divider(height: 1),
+                            for (final sale in storeSales)
+                              Builder(builder: (context) {
+                                final voucherTotal = AppData.instance.totalForSale(sale.voucherNumber);
+                                final paid = AppData.instance.paidForSale(sale.voucherNumber);
+                                final balance = (voucherTotal - paid).clamp(0, double.infinity).toDouble();
+                                final paymentSummary = uiF(
+                                  'Paid {paid} / {total} • Balance {balance}',
+                                  {
+                                    'paid': paid.toStringAsFixed(2),
+                                    'total': voucherTotal.toStringAsFixed(2),
+                                    'balance': balance.toStringAsFixed(2),
+                                  },
+                                );
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.only(left: 20, right: 12),
+                                  leading: const Icon(Icons.receipt_long_outlined, color: Colors.teal),
+                                  title: Text(uiF('Voucher {voucher}', {'voucher': sale.voucherNumber})),
+                                  subtitle: Text('${_formatDateOnly(sale.date)}\n$paymentSummary'),
+                                  isThreeLine: true,
+                                  trailing: Wrap(
+                                    spacing: 2,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      IconButton(
+                                        onPressed: () => _history(sale),
+                                        icon: const Icon(Icons.history),
+                                        tooltip: uiT('Payment history'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () => _receive(sale),
+                                        child: Text(uiT('Receive')),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _ledgerTotal(String text, Color color) => Container(width: double.infinity, color: color.withValues(alpha: .12), padding: const EdgeInsets.all(16), child: Text(text, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)));
@@ -9683,11 +9875,14 @@ class _VouchersPageState extends State<VouchersPage> {
     if (mounted) setState(() {});
   }
 
-  void _confirmDelete(Voucher v) {
+  Future<void> _confirmDelete(Voucher v) async {
+    final security = SecurityManager.instance;
+    final approved = security.can(PosPermission.saleDelete) || await security.requireApproval(context, permission: PosPermission.saleDelete, action: 'Deleting voucher ${v.id}');
+    if (!approved || !mounted) return;
     showDialog(context: context, builder: (dialogContext) => AlertDialog(
       title: Text(uiT('Delete voucher?')),
       content: Text(uiF('Delete the voucher for "{customer}"? Stock sold on this voucher will be returned.', {'customer': v.customerName.isEmpty ? uiT('Customer') : v.customerName})),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(uiT('Cancel'))), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () async { await AppData.instance.deleteVoucher(v.id); if (dialogContext.mounted) Navigator.pop(dialogContext); if (mounted) setState(() {}); }, child: Text(uiT('Delete')))],
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(uiT('Cancel'))), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () async { await AppData.instance.deleteVoucher(v.id, approved: !security.can(PosPermission.saleDelete)); if (dialogContext.mounted) Navigator.pop(dialogContext); if (mounted) setState(() {}); }, child: Text(uiT('Delete')))],
     ));
   }
 
@@ -11814,8 +12009,10 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _copyExport() async {
-    final json = AppData.instance.exportJson();
+    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can export data.'))); return; }
+    final json = await AppData.instance.exportSecureBackup();
     await Clipboard.setData(ClipboardData(text: json));
+    await SecurityManager.instance.log('Encrypted backup copied to clipboard');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -11828,18 +12025,21 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _saveExportFile() async {
+    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can export data.'))); return; }
     try {
-      final json = AppData.instance.exportJson();
+      final json = await AppData.instance.exportSecureBackup();
       final stamp = DateTime.now()
           .toIso8601String()
           .replaceAll(':', '-')
           .replaceAll('.', '-');
       final uri = await FilePicker.saveFile(
-        fileName: 'pos_backup_$stamp.json',
+        fileName: 'pos_backup_$stamp.posbak',
         bytes: Uint8List.fromList(utf8.encode(json)),
       );
 
       if (mounted && uri != null) {
+        await SecurityManager.instance.log('Encrypted backup exported', detail: uri.toString());
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(uiF('Backup file saved ({count} characters).', {'count': json.length.toString()})),
@@ -11859,6 +12059,7 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _importRaw(String raw) async {
+    if (!SecurityManager.instance.can(PosPermission.restoreBackup)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can restore a backup.'))); return; }
     final cleaned = raw.replaceFirst('\uFEFF', '').trim();
     if (cleaned.isEmpty) {
       if (mounted) {
@@ -11892,7 +12093,8 @@ class _DataBackupPageState extends State<DataBackupPage> {
 
     setState(() => _importing = true);
     try {
-      await AppData.instance.importJson(cleaned);
+      await AppData.instance.importBackup(cleaned);
+      await SecurityManager.instance.log('Backup restored', detail: '${cleaned.length} characters');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(uiT('Data imported successfully'))),
@@ -11917,7 +12119,7 @@ class _DataBackupPageState extends State<DataBackupPage> {
     try {
       final file = await FilePicker.pickFile(
         type: FileType.custom,
-        allowedExtensions: const ['json', 'txt'],
+        allowedExtensions: const ['json', 'txt', 'posbak'],
       );
       if (file == null) return;
 
