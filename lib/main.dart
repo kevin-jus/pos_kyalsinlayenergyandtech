@@ -2255,7 +2255,11 @@ class AppData {
   }
 
   List<LedgerEntry> _buildCashEntries() {
-    final result = <LedgerEntry>[...incomeExpenseEntries];
+    // The fixed starting-capital record is a balance-sheet baseline, not a
+    // cash movement, so it must never be counted as income.
+    final result = <LedgerEntry>[
+      ...incomeExpenseEntries.where((entry) => entry.type != 'capital_start'),
+    ];
 
     for (final payment in paymentTransactions) {
       Sale? sale;
@@ -2553,13 +2557,13 @@ class PosDashboardScreen extends StatelessWidget {
     final permission = switch (pageKey) {
       'Products' || 'Instock Products' || 'Incoming Products' || 'Cylinder Cycles' || 'Cylinder Types' => PosPermission.inventory,
       'Customer' => PosPermission.customers,
-      'Sales Report' || 'Pay Yan' || 'Ya Yan' || 'Income/Expense' => PosPermission.reports,
+      'Sales Report' || 'Pay Yan' || 'Ya Yan' || 'Income/Expense' || 'Capital' => PosPermission.reports,
       'Data Backup' => PosPermission.exportData,
       'Wi-Fi Sync' || 'Security Center' => PosPermission.security,
       _ => null,
     };
     if (permission != null && !SecurityManager.instance.can(permission)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your role does not have access to this area.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Your role does not have access to this area.'))));
       return;
     }
     late final Widget targetScreen;
@@ -2596,7 +2600,8 @@ class PosDashboardScreen extends StatelessWidget {
         targetScreen = const VouchersPage(title: 'Vouchers');
         break;
       case 'Income/Expense':
-        targetScreen = const IncomeExpensePage(title: 'Income/Expense');
+      case 'Capital':
+        targetScreen = const CapitalPage(title: 'Capital');
         break;
       case 'Sales Report':
         targetScreen = const SalesReportPage(title: 'Sales Report');
@@ -2675,7 +2680,7 @@ class PosDashboardScreen extends StatelessWidget {
                   ],
                 ),
                 actions: [
-                  IconButton(tooltip: 'Sign out', icon: const Icon(Icons.logout), onPressed: SecurityManager.instance.logout),
+                  IconButton(tooltip: uiT('Sign out'), icon: const Icon(Icons.logout), onPressed: SecurityManager.instance.logout),
                   IconButton(
                     tooltip: UiTranslation.languageButtonTooltip,
                     icon: const Icon(Icons.translate),
@@ -2754,8 +2759,8 @@ class PosDashboardScreen extends StatelessWidget {
                       _buildDrawerItem(
                         context,
                         const _DashboardPageButton(
-                          pageKey: 'Income/Expense',
-                          labelKey: 'Income/Expense',
+                          pageKey: 'Capital',
+                          labelKey: 'Capital',
                           icon: Icons.account_balance_outlined,
                         ),
                       ),
@@ -3387,479 +3392,118 @@ class _YaYanPageState extends State<YaYanPage> {
   Widget _ledgerTotal(String text, Color color) => Container(width: double.infinity, color: color.withValues(alpha: .12), padding: const EdgeInsets.all(16), child: Text(text, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)));
 }
 
-class IncomeExpensePage extends StatefulWidget {
-  const IncomeExpensePage({super.key, required this.title});
+class CapitalPage extends StatefulWidget {
+  const CapitalPage({super.key, required this.title});
 
   final String title;
 
   @override
-  State<IncomeExpensePage> createState() => _IncomeExpensePageState();
+  State<CapitalPage> createState() => _CapitalPageState();
 }
 
-class _IncomeExpensePageState extends State<IncomeExpensePage> {
-  String _period = 'Daily';
-  DateTime _selectedDate = DateTime.now();
-  DateTime _selectedMonth = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-  );
-  int _selectedYear = DateTime.now().year;
+class _CapitalDaySummary {
+  const _CapitalDaySummary({
+    required this.date,
+    required this.openingCapital,
+    required this.added,
+    required this.extracted,
+    required this.closingCapital,
+  });
 
-  static const List<String> _monthNames = <String>[
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
+  final DateTime date;
+  final double openingCapital;
+  final double added;
+  final double extracted;
+  final double closingCapital;
+}
 
-  bool _sameDate(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
+class _CapitalPageState extends State<CapitalPage> {
+  static const String _startingCapitalId = 'capital_starting_balance';
 
-  bool _matchesPeriod(DateTime date) {
-    switch (_period) {
-      case 'Monthly':
-        return date.year == _selectedMonth.year &&
-            date.month == _selectedMonth.month;
-      case 'Yearly':
-        return date.year == _selectedYear;
-      case 'Daily':
-      default:
-        return _sameDate(date, _selectedDate);
-    }
-  }
+  DateTime _dayOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 
-  String _formatDate(DateTime date) => _formatDateOnly(date);
-
-  String _formatMonth(DateTime month) =>
-      '${uiT(_monthNames[month.month - 1])} ${month.year}';
-
-  String _periodValueLabel() {
-    switch (_period) {
-      case 'Monthly':
-        return _formatMonth(_selectedMonth);
-      case 'Yearly':
-        return _selectedYear.toString();
-      case 'Daily':
-      default:
-        return _formatDate(_selectedDate);
-    }
-  }
-
-  String _periodLabel() =>
-      uiF('Showing {period}', {'period': _periodValueLabel()});
-
-  Future<void> _selectDailyDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      helpText: uiT('Select transaction date'),
-    );
-
-    if (picked != null && mounted) {
-      setState(() {
-        _selectedDate = picked;
-        _selectedMonth = DateTime(picked.year, picked.month);
-        _selectedYear = picked.year;
-      });
-    }
-  }
-
-  Future<void> _selectMonth() async {
-    int tempYear = _selectedMonth.year;
-    int tempMonth = _selectedMonth.month;
-
-    final selected = await showDialog<DateTime>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return AlertDialog(
-              title: Text(uiT('Select Month')),
-              content: SizedBox(
-                width: 360,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<int>(
-                      initialValue: tempYear,
-                      decoration: InputDecoration(
-                        labelText: uiT('Year'),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        for (int year = 2000; year <= 2100; year++)
-                          DropdownMenuItem<int>(
-                            value: year,
-                            child: Text('$year'),
-                          ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setDialogState(() => tempYear = value);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      itemCount: 12,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 2.3,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
-                      itemBuilder: (_, index) {
-                        final month = index + 1;
-                        final selected = month == tempMonth;
-                        return OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: selected
-                                ? PosDashboardScreen.primaryGreen
-                                    .withValues(alpha: .12)
-                                : null,
-                          ),
-                          onPressed: () {
-                            setDialogState(() => tempMonth = month);
-                          },
-                          child: Text(uiT(_monthNames[index])),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: Text(uiT('Cancel')),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(
-                    dialogContext,
-                    DateTime(tempYear, tempMonth),
-                  ),
-                  child: Text(uiT('Select')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (selected != null && mounted) {
-      setState(() {
-        _selectedMonth = DateTime(selected.year, selected.month);
-        _selectedYear = selected.year;
-        _selectedDate = selected;
-      });
-    }
-  }
-
-  Future<void> _selectYear() async {
-    final selected = await showDialog<int>(
-      context: context,
-      builder: (dialogContext) {
-        int tempYear = _selectedYear;
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return AlertDialog(
-              title: Text(uiT('Select Year')),
-              content: DropdownButtonFormField<int>(
-                initialValue: tempYear,
-                decoration: InputDecoration(
-                  labelText: uiT('Year'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  for (int year = 2000; year <= 2100; year++)
-                    DropdownMenuItem<int>(
-                      value: year,
-                      child: Text('$year'),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setDialogState(() => tempYear = value);
-                },
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: Text(uiT('Cancel')),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(dialogContext, tempYear),
-                  child: Text(uiT('Select')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (selected != null && mounted) {
-      setState(() {
-        _selectedYear = selected;
-        _selectedMonth = DateTime(selected, _selectedMonth.month);
-        _selectedDate = DateTime(selected, _selectedDate.month, _selectedDate.day);
-      });
-    }
-  }
-
-  void _changePeriod(int direction) {
-    setState(() {
-      switch (_period) {
-        case 'Monthly':
-          _selectedMonth = DateTime(
-            _selectedMonth.year,
-            _selectedMonth.month + direction,
-          );
-          _selectedYear = _selectedMonth.year;
-          _selectedDate = _selectedMonth;
-          break;
-        case 'Yearly':
-          _selectedYear += direction;
-          _selectedMonth = DateTime(_selectedYear, _selectedMonth.month);
-          _selectedDate = DateTime(
-            _selectedYear,
-            _selectedDate.month,
-            _selectedDate.day,
-          );
-          break;
-        case 'Daily':
-        default:
-          _selectedDate = _selectedDate.add(Duration(days: direction));
-          _selectedMonth = DateTime(_selectedDate.year, _selectedDate.month);
-          _selectedYear = _selectedDate.year;
-          break;
-      }
-    });
-  }
-
-  void _jumpToToday() {
-    final today = DateTime.now();
-    setState(() {
-      _selectedDate = today;
-      _selectedMonth = DateTime(today.year, today.month);
-      _selectedYear = today.year;
-    });
-  }
-
-  Widget _periodSelector() {
-    return Card(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(value: 'Daily', label: Text(uiT('Daily'))),
-                ButtonSegment(value: 'Monthly', label: Text(uiT('Monthly'))),
-                ButtonSegment(value: 'Yearly', label: Text(uiT('Yearly'))),
-              ],
-              selected: {_period},
-              onSelectionChanged: (selection) {
-                setState(() => _period = selection.first);
-              },
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                IconButton(
-                  tooltip: uiT('Previous period'),
-                  onPressed: () => _changePeriod(-1),
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                Expanded(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      switch (_period) {
-                        case 'Monthly':
-                          _selectMonth();
-                          break;
-                        case 'Yearly':
-                          _selectYear();
-                          break;
-                        case 'Daily':
-                        default:
-                          _selectDailyDate();
-                          break;
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black26),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _period == 'Daily'
-                                ? Icons.calendar_today_outlined
-                                : _period == 'Monthly'
-                                    ? Icons.calendar_month_outlined
-                                    : Icons.event_repeat_outlined,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              _periodLabel(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: uiT('Next period'),
-                  onPressed: () => _changePeriod(1),
-                  icon: const Icon(Icons.chevron_right),
-                ),
-                TextButton(
-                  onPressed: _jumpToToday,
-                  child: Text(uiT('Today')),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  double _grossProfit() {
-    double total = 0;
-    for (final item in AppData.instance.saleItems) {
-      Sale? sale;
-      for (final candidate in AppData.instance.sales) {
-        if (candidate.voucherNumber == item.saleVoucherNumber) {
-          sale = candidate;
-          break;
-        }
-      }
-      if (sale != null && _matchesPeriod(sale.date)) {
-        total += item.profit;
+  LedgerEntry? get _startingCapitalEntry {
+    for (final entry in AppData.instance.incomeExpenseEntries) {
+      if (entry.id == _startingCapitalId && entry.type == 'capital_start') {
+        return entry;
       }
     }
-    return total;
+    return null;
   }
 
-  List<LedgerEntry> _transactions() {
-    final entries = AppData.instance.cashEntries
-        .where((entry) => _matchesPeriod(entry.date))
-        .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
-    return entries;
+  bool get _isConfigured => _startingCapitalEntry != null;
+  double get _startingCapital => _startingCapitalEntry?.amount ?? 0;
+  DateTime? get _capitalStartDate => _startingCapitalEntry == null
+      ? null
+      : _dayOnly(_startingCapitalEntry!.date);
+
+  String _money(double value) =>
+      'MMK ${value.toStringAsFixed(value == value.roundToDouble() ? 0 : 2)}';
+
+  bool _isExpense(LedgerEntry entry) => entry.type == 'expense';
+
+  DateTime _defaultStartDate() {
+    final now = _dayOnly(DateTime.now());
+    final dates = AppData.instance.cashEntries
+        .where((entry) => !_dayOnly(entry.date).isAfter(now))
+        .map((entry) => _dayOnly(entry.date))
+        .toList();
+    if (dates.isEmpty) return now;
+    dates.sort((a, b) => a.compareTo(b));
+    return dates.first;
   }
 
-  double _manualExpenses() {
-    return AppData.instance.incomeExpenseEntries
-        .where((entry) =>
-            entry.type == 'expense' && _matchesPeriod(entry.date))
-        .fold(0.0, (sum, entry) => sum + entry.amount);
-  }
+  Future<void> _setStartingCapital() async {
+    if (_isConfigured) return;
 
-  Future<void> _showAddDialog() async {
-    final nameCtrl = TextEditingController();
-    final noteCtrl = TextEditingController();
-    final amountCtrl = TextEditingController();
-    String type = 'income';
-    DateTime entryDate = _selectedDate;
-
+    final amountController = TextEditingController();
+    DateTime startDate = _defaultStartDate();
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(uiT('Add Entry')),
-          content: SingleChildScrollView(
+          title: Text(uiT('Set Starting Capital')),
+          content: SizedBox(
+            width: 400,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(value: 'income', label: Text(uiT('Income'))),
-                    ButtonSegment(value: 'expense', label: Text(uiT('Expense'))),
-                  ],
-                  selected: {type},
-                  onSelectionChanged: (selection) =>
-                      setDialogState(() => type = selection.first),
+                Text(
+                  uiT('This amount is saved once as the fixed opening balance and cannot be edited from the Capital page.'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: amountController,
+                  autofocus: true,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: uiT('Starting Capital (MMK)'),
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 InkWell(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: dialogContext,
-                      initialDate: entryDate,
+                      initialDate: startDate,
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      helpText: uiT('Select entry date'),
+                      helpText: uiT('Capital tracking start date'),
                     );
                     if (picked != null) {
-                      setDialogState(() => entryDate = picked);
+                      setDialogState(() => startDate = _dayOnly(picked));
                     }
                   },
                   child: InputDecorator(
                     decoration: InputDecoration(
-                      labelText: uiT('Date'),
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today_outlined),
+                      labelText: uiT('Tracking Start Date'),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: const Icon(Icons.calendar_today_outlined),
                     ),
-                    child: Text(_formatDate(entryDate)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: InputDecoration(
-                    labelText: uiT('Description'),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: uiT('Amount'),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: noteCtrl,
-                  decoration: InputDecoration(
-                    labelText: uiT('Note (optional)'),
-                    border: OutlineInputBorder(),
+                    child: Text(_formatDateOnly(startDate)),
                   ),
                 ),
               ],
@@ -3870,62 +3514,158 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
               onPressed: () => Navigator.pop(dialogContext, false),
               child: Text(uiT('Cancel')),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: PosDashboardScreen.primaryGreen,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                final amount = double.tryParse(amountCtrl.text.trim()) ?? 0;
-                if (nameCtrl.text.trim().isEmpty || amount <= 0) {
+            FilledButton.icon(
+              icon: const Icon(Icons.lock_outline),
+              onPressed: () {
+                final amount = double.tryParse(amountController.text.trim());
+                if (amount == null || !amount.isFinite || amount < 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content:
-                          Text(uiT('Enter a description and a valid amount')),
-                    ),
+                    SnackBar(content: Text(uiT('Enter a valid starting capital amount.'))),
                   );
                   return;
                 }
-
-                await AppData.instance.addIncomeExpense(
-                  LedgerEntry(
-                    id: AppData.newId(),
-                    name: nameCtrl.text.trim(),
-                    note: noteCtrl.text.trim(),
-                    amount: amount,
-                    date: entryDate,
-                    type: type,
-                  ),
-                );
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext, true);
-                }
+                Navigator.pop(dialogContext, true);
               },
-              child: Text(uiT('Save')),
+              label: Text(uiT('Set and Lock')),
             ),
           ],
         ),
       ),
     );
 
-    nameCtrl.dispose();
-    noteCtrl.dispose();
-    amountCtrl.dispose();
-
-    if (saved == true && mounted) setState(() {});
+    if (saved == true && mounted) {
+      final amount = double.tryParse(amountController.text.trim());
+      if (amount != null && amount.isFinite && amount >= 0) {
+        try {
+          await AppData.instance.addIncomeExpense(
+            LedgerEntry(
+              id: _startingCapitalId,
+              name: 'Starting Capital',
+              note: 'Fixed opening balance; not a cash transaction',
+              amount: amount,
+              date: startDate,
+              type: 'capital_start',
+            ),
+          );
+          if (mounted) {
+            setState(() {});
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(uiT('Starting capital has been set and locked.'))),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+            );
+          }
+        }
+      }
+    }
+    amountController.dispose();
   }
 
-  String _money(double value) =>
-      'MMK ${value.toStringAsFixed(value == value.roundToDouble() ? 0 : 2)}';
+  List<LedgerEntry> _trackedEntries() {
+    final startDate = _capitalStartDate;
+    if (startDate == null) return const [];
+    final today = _dayOnly(DateTime.now());
+    return AppData.instance.cashEntries.where((entry) {
+      final date = _dayOnly(entry.date);
+      return !date.isBefore(startDate) && !date.isAfter(today);
+    }).toList()
+      ..sort((a, b) {
+        final byDate = a.date.compareTo(b.date);
+        return byDate != 0 ? byDate : a.id.compareTo(b.id);
+      });
+  }
 
-  Widget _summaryCard(
-    String title,
-    double amount,
-    IconData icon,
-    Color color,
-  ) {
+  List<_CapitalDaySummary> _buildDaySummaries() {
+    final startDate = _capitalStartDate;
+    if (startDate == null) return const [];
+
+    final today = _dayOnly(DateTime.now());
+    if (startDate.isAfter(today)) return const [];
+
+    final entries = _trackedEntries();
+    final daysByKey = <String, DateTime>{};
+    String keyFor(DateTime date) =>
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    // Show days that have activity, plus the opening and current day.
+    daysByKey[keyFor(startDate)] = startDate;
+    daysByKey[keyFor(today)] = today;
+    for (final entry in entries) {
+      final date = _dayOnly(entry.date);
+      daysByKey[keyFor(date)] = date;
+    }
+    final days = daysByKey.values.toList()..sort((a, b) => a.compareTo(b));
+
+    var runningCapital = _startingCapital;
+    final summaries = <_CapitalDaySummary>[];
+    for (final day in days) {
+      final opening = runningCapital;
+      var added = 0.0;
+      var extracted = 0.0;
+      for (final entry in entries) {
+        if (!_dayOnly(entry.date).isAtSameMomentAs(day)) continue;
+
+        // Linked payment rows may be negative to represent a reversal/refund.
+        // Respect their signed direction; manual entries are always positive
+        // and use their Income/Expense type to determine the direction.
+        if (entry.id.startsWith('payment:')) {
+          final cashDelta = entry.type == 'expense'
+              ? -entry.amount
+              : entry.amount;
+          if (cashDelta >= 0) {
+            added += cashDelta;
+          } else {
+            extracted += -cashDelta;
+          }
+        } else {
+          final amount = entry.amount.abs();
+          if (_isExpense(entry)) {
+            extracted += amount;
+          } else {
+            added += amount;
+          }
+        }
+      }
+      runningCapital = opening + added - extracted;
+      summaries.add(_CapitalDaySummary(
+        date: day,
+        openingCapital: opening,
+        added: added,
+        extracted: extracted,
+        closingCapital: runningCapital,
+      ));
+    }
+    return summaries.reversed.toList();
+  }
+
+  double get _todayCapital {
+    if (!_isConfigured) return 0;
+    final today = _dayOnly(DateTime.now());
+    for (final summary in _buildDaySummaries()) {
+      if (summary.date.isAtSameMomentAs(today)) return summary.closingCapital;
+    }
+    return _startingCapital;
+  }
+
+  double get _totalToReceive => AppData.instance.yaYanEntries.fold<double>(
+        0,
+        (sum, entry) => sum + entry.amount.abs(),
+      );
+
+  Widget _capitalCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    String? subtitle,
+    Widget? trailing,
+  }) {
     return Card(
-      elevation: 1.5,
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
@@ -3940,130 +3680,97 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 5),
                   Text(
-                    uiT(title),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    value,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _money(amount),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 3),
+                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                  ],
                 ],
               ),
             ),
+            if (trailing != null) trailing,
           ],
         ),
       ),
     );
   }
 
-  Widget _summaryPanel(double profit, double expense, double net) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget _dayReport(_CapitalDaySummary summary) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ExpansionTile(
+        leading: const Icon(Icons.calendar_month_outlined),
+        title: Text(
+          _formatDateOnly(summary.date),
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Wrap(
+            spacing: 14,
+            runSpacing: 4,
+            children: [
+              Text(
+                uiF('Added: {amount}', {'amount': _money(summary.added)}),
+                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+              ),
+              Text(
+                uiF('Extracted: {amount}', {'amount': _money(summary.extracted)}),
+                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        children: [
+          const Divider(height: 8),
+          _balanceRow(uiT('Starting capital for this day'), summary.openingCapital),
+          const SizedBox(height: 8),
+          _balanceRow(uiT('Added today'), summary.added, valueColor: Colors.green),
+          const SizedBox(height: 8),
+          _balanceRow(uiT('Extracted today'), summary.extracted, valueColor: Colors.red),
+          const Divider(height: 20),
+          _balanceRow(
+            uiT('Left capital at day end'),
+            summary.closingCapital,
+            valueColor: summary.closingCapital >= 0 ? PosDashboardScreen.primaryGreen : Colors.red,
+            bold: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _balanceRow(String label, double amount, {Color? valueColor, bool bold = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Expanded(child: Text(label)),
+        const SizedBox(width: 10),
         Text(
-          uiT('Summary'),
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        _summaryCard('Total Profit', profit, Icons.trending_up, Colors.green),
-        _summaryCard('Expense', expense, Icons.trending_down, Colors.red),
-        _summaryCard(
-          'Net Profit',
-          net,
-          Icons.account_balance_wallet_outlined,
-          net >= 0 ? PosDashboardScreen.primaryGreen : Colors.red,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          uiF('Period: {period}. Total Profit comes from the saved SaleItem profit. Expense here means manually recorded Income/Expense expenses; supplier purchase cost is already used when sale profit is calculated.', {'period': _periodValueLabel()}),
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+          _money(amount),
+          textAlign: TextAlign.end,
+          style: TextStyle(
+            color: valueColor,
+            fontWeight: bold ? FontWeight.bold : FontWeight.w500,
+          ),
         ),
       ],
     );
   }
 
-  Widget _transactionList(List<LedgerEntry> entries) {
-    if (entries.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            uiT('No transactions for this period.'),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.black54),
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(8),
-      itemCount: entries.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final entry = entries[index];
-        final isExpense = entry.type == 'expense';
-        final isLinkedPayment = entry.id.startsWith('payment:');
-        return ListTile(
-          leading: Icon(
-            isExpense ? Icons.arrow_downward : Icons.arrow_upward,
-            color: isExpense ? Colors.red : Colors.green,
-          ),
-          title: Text(entry.name),
-          subtitle: Text(
-            '${entry.note.isNotEmpty ? '${uiLedgerNote(entry.note)} • ' : ''}${_formatDateOnly(entry.date)}',
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${isExpense ? '-' : '+'}${_money(entry.amount.abs())}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isExpense
-                      ? Colors.red
-                      : PosDashboardScreen.primaryGreen,
-                ),
-              ),
-              if (isLinkedPayment)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Tooltip(
-                    message: uiT('Linked payment transaction'),
-                    child: Icon(Icons.link, size: 20, color: Colors.grey),
-                  ),
-                )
-              else
-                IconButton(
-                  tooltip: uiT('Delete'),
-                  icon:
-                      const Icon(Icons.delete_outline, color: Colors.grey),
-                  onPressed: () async {
-                    await AppData.instance.removeIncomeExpense(entry.id);
-                    if (mounted) setState(() {});
-                  },
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final transactions = _transactions();
-    final profit = _grossProfit();
-    final expense = _manualExpenses();
-    final net = profit - expense;
+    final summaries = _buildDaySummaries();
+    final todayCapital = _todayCapital;
+    final toReceive = _totalToReceive;
+    final width = MediaQuery.sizeOf(context).width;
+    final cardWidth = width >= 760 ? (width - 56) / 2 : width - 32;
 
     return Scaffold(
       appBar: AppBar(
@@ -4071,73 +3778,89 @@ class _IncomeExpensePageState extends State<IncomeExpensePage> {
         backgroundColor: PosDashboardScreen.primaryGreen,
         foregroundColor: Colors.white,
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
-        onPressed: _showAddDialog,
-        child: const Icon(Icons.add),
-      ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          _periodSelector(),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final wide = constraints.maxWidth >= 900;
-                final summary = Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                  child: _summaryPanel(profit, expense, net),
-                );
-
-                if (wide) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                              child: Text(
-                                uiF('Transactions • {period}', {'period': _periodValueLabel()}),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Expanded(child: _transactionList(transactions)),
-                          ],
-                        ),
-                      ),
-                      SizedBox(width: 340, child: summary),
-                    ],
-                  );
-                }
-
-                return Column(
-                  children: [
-                    summary,
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          uiF('Transactions • {period}', {'period': _periodValueLabel()}),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(child: _transactionList(transactions)),
-                  ],
-                );
-              },
-            ),
+          _capitalCard(
+            title: uiT('Starting Capital (Fixed)'),
+            value: _isConfigured ? _money(_startingCapital) : uiT('Not set yet'),
+            icon: _isConfigured ? Icons.lock_outline : Icons.account_balance_wallet_outlined,
+            color: _isConfigured ? PosDashboardScreen.primaryGreen : Colors.orange,
+            subtitle: _isConfigured
+                ? uiF('Locked since {date}', {'date': _formatDateOnly(_capitalStartDate!)})
+                : uiT('Set once to begin capital tracking.'),
+            trailing: _isConfigured
+                ? const Icon(Icons.verified_user_outlined, color: Colors.green)
+                : FilledButton(
+                    onPressed: _setStartingCapital,
+                    child: Text(uiT('Set Capital')),
+                  ),
           ),
+          if (_isConfigured) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: cardWidth,
+                  child: _capitalCard(
+                    title: uiT('Today Updated Capital'),
+                    value: _money(todayCapital),
+                    icon: Icons.account_balance_outlined,
+                    color: todayCapital >= 0 ? PosDashboardScreen.primaryGreen : Colors.red,
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _capitalCard(
+                    title: uiT('Total to Receive Amount'),
+                    value: _money(toReceive),
+                    icon: Icons.pending_actions_outlined,
+                    color: Colors.orange.shade800,
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _capitalCard(
+                    title: uiT('Total Capital with To Receive'),
+                    value: _money(todayCapital + toReceive),
+                    icon: Icons.savings_outlined,
+                    color: Colors.blue.shade800,
+                    subtitle: uiT('Updated capital + outstanding customer balances'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              uiT('Daily Capital Reports'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              uiT('Expand a date to see that day’s opening capital and remaining capital after additions and extractions.'),
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 10),
+            if (summaries.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(uiT('No capital activity has been recorded yet.'), textAlign: TextAlign.center),
+              )
+            else
+              for (final summary in summaries) _dayReport(summary),
+          ] else ...[
+            const SizedBox(height: 14),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  uiT('Set your starting capital to see today’s updated capital, outstanding receivables, total capital with receivables, and daily capital reports.'),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -4461,6 +4184,136 @@ class _SalesReportPageState extends State<SalesReportPage> {
         .where((entry) =>
             entry.type == 'expense' && _matchesPeriod(entry.date))
         .fold(0.0, (sum, entry) => sum + entry.amount);
+  }
+
+  double _manualIncome() {
+    return AppData.instance.incomeExpenseEntries
+        .where((entry) =>
+            entry.type == 'income' && _matchesPeriod(entry.date))
+        .fold(0.0, (sum, entry) => sum + entry.amount);
+  }
+
+  Future<void> _showAddDialog(String initialType) async {
+    final nameCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+    String type = initialType;
+    DateTime entryDate = _selectedDate;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(uiT(type == 'income' ? 'Add Income' : 'Add Expense')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(value: 'income', label: Text(uiT('Income'))),
+                    ButtonSegment(value: 'expense', label: Text(uiT('Expense'))),
+                  ],
+                  selected: {type},
+                  onSelectionChanged: (selection) =>
+                      setDialogState(() => type = selection.first),
+                ),
+                const SizedBox(height: 12),
+                InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: dialogContext,
+                      initialDate: entryDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                      helpText: uiT('Select entry date'),
+                    );
+                    if (picked != null) setDialogState(() => entryDate = picked);
+                  },
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: uiT('Date'),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: const Icon(Icons.calendar_today_outlined),
+                    ),
+                    child: Text(_formatDateOnly(entryDate)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: uiT('Description'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: uiT('Amount (MMK)'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: InputDecoration(
+                    labelText: uiT('Note (optional)'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(uiT('Cancel')),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final amount = double.tryParse(amountCtrl.text.trim()) ?? 0;
+                if (nameCtrl.text.trim().isEmpty || amount <= 0 || !amount.isFinite) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(uiT('Enter a description and a valid amount.'))),
+                  );
+                  return;
+                }
+                try {
+                  await AppData.instance.addIncomeExpense(
+                    LedgerEntry(
+                      id: AppData.newId(),
+                      name: nameCtrl.text.trim(),
+                      note: noteCtrl.text.trim(),
+                      amount: amount,
+                      date: entryDate,
+                      type: type,
+                    ),
+                  );
+                  if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                } catch (e) {
+                  if (dialogContext.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+                    );
+                  }
+                }
+              },
+              child: Text(uiT('Save')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    nameCtrl.dispose();
+    noteCtrl.dispose();
+    amountCtrl.dispose();
+    if (saved == true && mounted) setState(() {});
   }
 
   String _money(double value) =>
@@ -4863,7 +4716,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
       children: [
         for (var i = 0; i < headers.length; i++)
           _pdfReportCell(
-            headers[i],
+            uiT(headers[i]),
             regularFont: regularFont,
             boldFont: boldFont,
             fontSize: headers.length > 7 ? 8 : 9,
@@ -5294,7 +5147,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
         final monthSales = sales
             .where((sale) => sale.date.month == month)
             .toList();
-        map[_monthNames[month - 1].substring(0, 3)] = _totalSalesAmount(monthSales);
+        map[uiT(_monthNames[month - 1].substring(0, 3))] = _totalSalesAmount(monthSales);
       }
     } else if (_period == 'Monthly') {
       final days = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day;
@@ -5371,7 +5224,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
       yearOutstanding += balanceTotal;
 
       rows.add([
-        _monthNames[month - 1],
+        uiT(_monthNames[month - 1]),
         monthSales.length.toString(),
         _money(salesTotal),
         _money(costTotal),
@@ -5386,7 +5239,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
     final yearNet = yearGrossProfit - yearExpenses;
     final productRows = _reportProducts(sales);
     final customerRows = _reportCustomers(sales);
-    final paymentRows = _reportPaymentMethods(sales).entries.toList()
+    final paymentRows = _reportPaymentMethods(sales).entries.map((e) => MapEntry(uiT(e.key), e.value)).toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final expenseRows = AppData.instance.incomeExpenseEntries
         .where((entry) => entry.type == 'expense' && entry.date.year == year)
@@ -5471,7 +5324,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
             pw.SizedBox(height: 15),
             _pdfSectionTitle('Monthly Sales Trend', regularFont: regularFont, boldFont: boldFont),
             _pdfVerticalBarChart(
-              rows.asMap().entries.map((e) => MapEntry(_monthNames[e.key].substring(0, 3),
+              rows.asMap().entries.map((e) => MapEntry(uiT(_monthNames[e.key].substring(0, 3)),
                   double.tryParse(rows[e.key][2].replaceAll(RegExp(r'[^0-9.-]'), '')) ?? 0)).toList(),
               regularFont: regularFont,
               boldFont: boldFont,
@@ -5955,13 +5808,13 @@ class _SalesReportPageState extends State<SalesReportPage> {
             pageRows.add([
               _formatDateOnly(sale.date),
               sale.voucherNumber,
-              sale.customerName.isEmpty ? 'Customer' : sale.customerName,
+              sale.customerName.isEmpty ? uiT('Customer') : sale.customerName,
               itemsSummary.isEmpty ? '-' : itemsSummary,
               _money(amount),
               _money(paid),
               _money(balance),
               _money(profit),
-              status,
+              uiT(status),
             ]);
           }
 
@@ -6034,6 +5887,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
     final totalSales = _totalSalesAmount(sales);
     final totalCost = _totalLpgCost(sales);
     final expenses = _manualExpenses();
+    final otherIncome = _manualIncome();
     final profitBefore = totalSales - totalCost;
     final profitAfter = profitBefore - expenses;
 
@@ -6069,6 +5923,38 @@ class _SalesReportPageState extends State<SalesReportPage> {
                 _periodSelector(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => _showAddDialog('income'),
+                          icon: const Icon(Icons.add_circle_outline),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          label: Text(uiT('Add Income')),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => _showAddDialog('expense'),
+                          icon: const Icon(Icons.remove_circle_outline),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          label: Text(uiT('Add Expense')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final narrow = constraints.maxWidth < 420;
@@ -6077,6 +5963,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
                             Icons.local_gas_station_outlined, Colors.deepOrange),
                         _metricCard('Sales', totalSales,
                             Icons.point_of_sale_outlined, PosDashboardScreen.primaryGreen),
+                        _metricCard('Other Income', otherIncome,
+                            Icons.add_circle_outline, Colors.green),
                         _metricCard('Expenses', expenses,
                             Icons.trending_down, Colors.red),
                       ];
@@ -6098,6 +5986,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
                           cards[1],
                           const SizedBox(width: 8),
                           cards[2],
+                          const SizedBox(width: 8),
+                          cards[3],
                         ],
                       );
                     },
@@ -6178,9 +6068,9 @@ class _LedgerPageState extends State<LedgerPage> {
         builder: (dialogContext) => AlertDialog(
           title: Text(uiT('Automatically generated')),
           content: Text(
-            widget.title == 'Pay Yan'
+            uiT(widget.title == 'Pay Yan'
                 ? 'Pay Yan comes from unpaid IncomingSupply records. Record the supplier purchase first; it will appear here automatically.'
-                : 'Ya Yan comes from unpaid Sale records. Record the sale and payment first; it will appear here automatically.',
+                : 'Ya Yan comes from unpaid Sale records. Record the sale and payment first; it will appear here automatically.'),
           ),
           actions: [
             TextButton(
@@ -8706,18 +8596,18 @@ class _SalePageState extends State<SalePage> {
 
   Future<void> _copyVoucherText() async {
     final buffer = StringBuffer();
-    buffer.writeln('Kyal Sin Lay Energy & Tech');
-    buffer.writeln('Voucher No: ${AppData.instance.newVoucherNumber()}');
+    buffer.writeln(uiT('Kyal Sin Lay Energy & Tech'));
+    buffer.writeln(uiF('Voucher No: {voucher}', {'voucher': AppData.instance.newVoucherNumber()}));
     buffer.writeln(uiF('Date: {date}', {'date': _formatDate(_selectedDate)}));
     buffer.writeln(
-        uiF('Customer: {customer}', {'customer': _nameController.text.isEmpty ? 'N/A' : _nameController.text}));
+        uiF('Customer: {customer}', {'customer': _nameController.text.isEmpty ? uiT('N/A') : _nameController.text}));
     for (final item in _items) {
       buffer.writeln(
           '${item.name} x${item.qty}${item.saleUnit.isEmpty ? '' : ' ${item.saleUnit}'} = MMK ${item.amount.toStringAsFixed(2)}');
     }
     buffer.writeln(uiF('Total: MMK {amount}', {'amount': _grandTotal.toStringAsFixed(2)}));
     buffer.writeln(uiF('Paid: MMK {amount}', {'amount': _paid.toStringAsFixed(2)}));
-    buffer.writeln('Balance: MMK ${(_grandTotal - _paid).toStringAsFixed(2)}');
+    buffer.writeln(uiF('Balance: MMK {amount}', {'amount': (_grandTotal - _paid).toStringAsFixed(2)}));
     await Clipboard.setData(ClipboardData(text: buffer.toString()));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -9435,12 +9325,27 @@ class VoucherPreviewCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'VOUCHER: $voucherNumber',
+                      uiT('VOUCHER'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 2,
                       ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 3),
+
+                  // ==================================================
+                  // VOUCHER NUMBER
+                  // ==================================================
+                  Text(
+                    uiF('Voucher No: {voucher}', {'voucher': voucherNumber}),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
                   ),
 
@@ -9453,7 +9358,7 @@ class VoucherPreviewCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Prepared For: ${customerName.isEmpty ? 'John/Jane Doe' : customerName}',
+                          uiF('Prepared For: {customer}', {'customer': customerName.isEmpty ? uiT('John/Jane Doe') : customerName}),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -9464,7 +9369,7 @@ class VoucherPreviewCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Date: ${_formatDateOnly(date)}',
+                        uiF('Date: {date}', {'date': _formatDateOnly(date)}),
                         style: TextStyle(
                           fontSize: 10,
                           color: Colors.grey[600],
@@ -9504,7 +9409,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              'No',
+                              uiT('No'),
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9516,7 +9421,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              'Product',
+                              uiT('Product'),
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9528,7 +9433,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              'Price',
+                              uiT('Price'),
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9540,7 +9445,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              'Qty',
+                              uiT('Qty'),
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9552,7 +9457,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              'Amount',
+                              uiT('Amount'),
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9690,7 +9595,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              'Total',
+                              uiT('Total'),
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9721,7 +9626,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              'Paid',
+                              uiT('Paid'),
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9752,7 +9657,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              'Total Left',
+                              uiT('Total Left'),
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9801,7 +9706,7 @@ class VoucherPreviewCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Customer Sign',
+                            uiT('Customer Sign'),
                             style: TextStyle(
                               fontSize: 11,
                             ),
@@ -9850,7 +9755,7 @@ class VoucherPreviewCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Seller Sign',
+                            uiT('Seller Sign'),
                             style: TextStyle(
                               fontSize: 11,
                             ),
@@ -11886,7 +11791,7 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
                     labelText: uiT('Server IP address'),
-                    hintText: 'Example: 192.168.1.20',
+                    hintText: uiT('Example: 192.168.1.20'),
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -12015,7 +11920,7 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _copyExport() async {
-    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can export data.'))); return; }
+    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Only Owner or Admin can export data.')))); return; }
     final json = await AppData.instance.exportSecureBackup();
     await Clipboard.setData(ClipboardData(text: json));
     await SecurityManager.instance.log('Encrypted backup copied to clipboard');
@@ -12031,7 +11936,7 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _saveExportFile() async {
-    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can export data.'))); return; }
+    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Only Owner or Admin can export data.')))); return; }
     try {
       final json = await AppData.instance.exportSecureBackup();
       final stamp = DateTime.now()
@@ -12065,7 +11970,7 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _importRaw(String raw) async {
-    if (!SecurityManager.instance.can(PosPermission.restoreBackup)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can restore a backup.'))); return; }
+    if (!SecurityManager.instance.can(PosPermission.restoreBackup)) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Only Owner or Admin can restore a backup.')))); return; }
     final cleaned = raw.replaceFirst('\uFEFF', '').trim();
     if (cleaned.isEmpty) {
       if (mounted) {
