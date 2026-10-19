@@ -8707,6 +8707,7 @@ class _SalePageState extends State<SalePage> {
   Future<void> _copyVoucherText() async {
     final buffer = StringBuffer();
     buffer.writeln('Kyal Sin Lay Energy & Tech');
+    buffer.writeln('Voucher No: ${AppData.instance.newVoucherNumber()}');
     buffer.writeln(uiF('Date: {date}', {'date': _formatDate(_selectedDate)}));
     buffer.writeln(
         uiF('Customer: {customer}', {'customer': _nameController.text.isEmpty ? 'N/A' : _nameController.text}));
@@ -9213,6 +9214,7 @@ class _SalePageState extends State<SalePage> {
       padding: const EdgeInsets.all(16),
       child: Center(
         child: VoucherPreviewCard(
+          voucherNumber: AppData.instance.newVoucherNumber(),
           customerName: _nameController.text,
           items: _previewItems(),
           paid: _paid,
@@ -9285,12 +9287,14 @@ class _SalePageState extends State<SalePage> {
 class VoucherPreviewCard extends StatelessWidget {
   const VoucherPreviewCard({
     super.key,
+    required this.voucherNumber,
     required this.customerName,
     required this.items,
     required this.paid,
     required this.date,
   });
 
+  final String voucherNumber;
   final String customerName;
   final List<SaleItem> items;
   final double paid;
@@ -9305,6 +9309,7 @@ class VoucherPreviewCard extends StatelessWidget {
 
     if (items.isEmpty) {
       return 'Kyal Sin Lay Energy | '
+          'Voucher: $voucherNumber | '
           'Name: $name | '
           'Total: MMK ${_total.toStringAsFixed(2)}';
     }
@@ -9314,6 +9319,7 @@ class VoucherPreviewCard extends StatelessWidget {
         .join(', ');
 
     return 'Kyal Sin Lay Energy | '
+        'Voucher: $voucherNumber | '
         'Name: $name | '
         'Items: $itemDetails | '
         'Total: MMK ${_total.toStringAsFixed(2)}';
@@ -9435,6 +9441,21 @@ class VoucherPreviewCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         letterSpacing: 2,
                       ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 3),
+
+                  // ==================================================
+                  // VOUCHER NUMBER
+                  // ==================================================
+                  Text(
+                    'Voucher No: $voucherNumber',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
                   ),
 
@@ -9898,7 +9919,7 @@ class _VouchersPageState extends State<VouchersPage> {
           final statusColor=settled?Colors.green:paid?Colors.orange:Colors.red;
           return ListTile(
             leading: Icon(Icons.confirmation_number_outlined, color: PosDashboardScreen.primaryGreen),
-            title: Text(v.customerName.isEmpty ? uiT('Customer') : v.customerName),
+            title: Text('${v.voucherNumber} • ${v.customerName.isEmpty ? uiT('Customer') : v.customerName}'),
             subtitle: Text(uiF('{date} • {count} item(s) • {status}', {'date': _formatDateOnly(v.date), 'count': AppData.instance.itemsForSale(v.voucherNumber).length.toString(), 'status': uiT(status)})),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -10091,7 +10112,7 @@ class _VoucherDetailPageState extends State<VoucherDetailPage> {
     ]), body:Column(children:[
       Container(width:double.infinity,padding:const EdgeInsets.all(12),child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[Text(uiT(status),style:TextStyle(fontWeight:FontWeight.bold,color:status=='PAID'?Colors.green:status=='UNPAID'?Colors.red:Colors.orange)),Text(uiF('Paid {paid}', {'paid': paidAmount.toStringAsFixed(2)})),Text(uiF('Balance {balance}', {'balance': balance.toStringAsFixed(2)})) ])),
       Expanded(child:SingleChildScrollView(child:Column(children:[
-        Padding(padding:const EdgeInsets.all(16),child:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:380),child:RepaintBoundary(key:_voucherCaptureKey,child:VoucherPreviewCard(customerName:widget.voucher.customerName,items:AppData.instance.itemsForSale(widget.voucher.voucherNumber),paid:paidAmount,date:widget.voucher.date))))),
+        Padding(padding:const EdgeInsets.all(16),child:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:380),child:RepaintBoundary(key:_voucherCaptureKey,child:VoucherPreviewCard(voucherNumber:widget.voucher.voucherNumber,customerName:widget.voucher.customerName,items:AppData.instance.itemsForSale(widget.voucher.voucherNumber),paid:paidAmount,date:widget.voucher.date))))),
         Container(width:double.infinity,constraints:const BoxConstraints(maxWidth:520),padding:const EdgeInsets.fromLTRB(16,0,16,24),child:Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text(uiT('Payment History'),style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
           const SizedBox(height:8),
