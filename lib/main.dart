@@ -9435,27 +9435,12 @@ class VoucherPreviewCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'VOUCHER',
+                      'VOUCHER: $voucherNumber',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 2,
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 3),
-
-                  // ==================================================
-                  // VOUCHER NUMBER
-                  // ==================================================
-                  Text(
-                    'Voucher No: $voucherNumber',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
                     ),
                   ),
 
