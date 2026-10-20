@@ -1310,23 +1310,12 @@ class AppData {
   String exportJson() =>
       const JsonEncoder.withIndent('  ').convert(_snapshot());
 
-  /// Portable backups are encrypted with AES-GCM using the device key kept in
-  /// the OS keychain/keystore. They intentionally cannot be opened as plain
-  /// JSON if copied from the device.
-  Future<String> exportSecureBackup() async => jsonEncode({
-        'format': 'kyal-sin-lay-secure-backup',
-        'version': 1,
-        'createdAt': DateTime.now().toIso8601String(),
-        'payload': await SecureVault.instance.encrypt(exportJson(), aad: 'pos-backup-v1'),
-      });
+  /// Portable backups are ordinary readable JSON and can be inspected or
+  /// moved between devices as a normal JSON file.
+  Future<String> exportBackup() async => exportJson();
 
+  /// Restore the same plain JSON format produced by exportBackup().
   Future<void> importBackup(String raw) async {
-    final decoded = jsonDecode(raw.trim());
-    if (decoded is Map && decoded['format'] == 'kyal-sin-lay-secure-backup') {
-      final payload = decoded['payload'];
-      if (payload is! String) throw const FormatException('Secure backup payload is missing.');
-      raw = await SecureVault.instance.decrypt(payload, aad: 'pos-backup-v1');
-    }
     await importJson(raw);
   }
 
@@ -2563,7 +2552,7 @@ class PosDashboardScreen extends StatelessWidget {
       _ => null,
     };
     if (permission != null && !SecurityManager.instance.can(permission)) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Your role does not have access to this area.'))));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your role does not have access to this area.')));
       return;
     }
     late final Widget targetScreen;
@@ -2680,7 +2669,7 @@ class PosDashboardScreen extends StatelessWidget {
                   ],
                 ),
                 actions: [
-                  IconButton(tooltip: uiT('Sign out'), icon: const Icon(Icons.logout), onPressed: SecurityManager.instance.logout),
+                  IconButton(tooltip: 'Sign out', icon: const Icon(Icons.logout), onPressed: SecurityManager.instance.logout),
                   IconButton(
                     tooltip: UiTranslation.languageButtonTooltip,
                     icon: const Icon(Icons.translate),
@@ -4716,7 +4705,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
       children: [
         for (var i = 0; i < headers.length; i++)
           _pdfReportCell(
-            uiT(headers[i]),
+            headers[i],
             regularFont: regularFont,
             boldFont: boldFont,
             fontSize: headers.length > 7 ? 8 : 9,
@@ -5147,7 +5136,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
         final monthSales = sales
             .where((sale) => sale.date.month == month)
             .toList();
-        map[uiT(_monthNames[month - 1].substring(0, 3))] = _totalSalesAmount(monthSales);
+        map[_monthNames[month - 1].substring(0, 3)] = _totalSalesAmount(monthSales);
       }
     } else if (_period == 'Monthly') {
       final days = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day;
@@ -5224,7 +5213,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
       yearOutstanding += balanceTotal;
 
       rows.add([
-        uiT(_monthNames[month - 1]),
+        _monthNames[month - 1],
         monthSales.length.toString(),
         _money(salesTotal),
         _money(costTotal),
@@ -5239,7 +5228,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
     final yearNet = yearGrossProfit - yearExpenses;
     final productRows = _reportProducts(sales);
     final customerRows = _reportCustomers(sales);
-    final paymentRows = _reportPaymentMethods(sales).entries.map((e) => MapEntry(uiT(e.key), e.value)).toList()
+    final paymentRows = _reportPaymentMethods(sales).entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final expenseRows = AppData.instance.incomeExpenseEntries
         .where((entry) => entry.type == 'expense' && entry.date.year == year)
@@ -5324,7 +5313,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
             pw.SizedBox(height: 15),
             _pdfSectionTitle('Monthly Sales Trend', regularFont: regularFont, boldFont: boldFont),
             _pdfVerticalBarChart(
-              rows.asMap().entries.map((e) => MapEntry(uiT(_monthNames[e.key].substring(0, 3)),
+              rows.asMap().entries.map((e) => MapEntry(_monthNames[e.key].substring(0, 3),
                   double.tryParse(rows[e.key][2].replaceAll(RegExp(r'[^0-9.-]'), '')) ?? 0)).toList(),
               regularFont: regularFont,
               boldFont: boldFont,
@@ -5808,13 +5797,13 @@ class _SalesReportPageState extends State<SalesReportPage> {
             pageRows.add([
               _formatDateOnly(sale.date),
               sale.voucherNumber,
-              sale.customerName.isEmpty ? uiT('Customer') : sale.customerName,
+              sale.customerName.isEmpty ? 'Customer' : sale.customerName,
               itemsSummary.isEmpty ? '-' : itemsSummary,
               _money(amount),
               _money(paid),
               _money(balance),
               _money(profit),
-              uiT(status),
+              status,
             ]);
           }
 
@@ -6068,9 +6057,9 @@ class _LedgerPageState extends State<LedgerPage> {
         builder: (dialogContext) => AlertDialog(
           title: Text(uiT('Automatically generated')),
           content: Text(
-            uiT(widget.title == 'Pay Yan'
+            widget.title == 'Pay Yan'
                 ? 'Pay Yan comes from unpaid IncomingSupply records. Record the supplier purchase first; it will appear here automatically.'
-                : 'Ya Yan comes from unpaid Sale records. Record the sale and payment first; it will appear here automatically.'),
+                : 'Ya Yan comes from unpaid Sale records. Record the sale and payment first; it will appear here automatically.',
           ),
           actions: [
             TextButton(
@@ -8596,18 +8585,18 @@ class _SalePageState extends State<SalePage> {
 
   Future<void> _copyVoucherText() async {
     final buffer = StringBuffer();
-    buffer.writeln(uiT('Kyal Sin Lay Energy & Tech'));
-    buffer.writeln(uiF('Voucher No: {voucher}', {'voucher': AppData.instance.newVoucherNumber()}));
+    buffer.writeln('Kyal Sin Lay Energy & Tech');
+    buffer.writeln('Voucher No: ${AppData.instance.newVoucherNumber()}');
     buffer.writeln(uiF('Date: {date}', {'date': _formatDate(_selectedDate)}));
     buffer.writeln(
-        uiF('Customer: {customer}', {'customer': _nameController.text.isEmpty ? uiT('N/A') : _nameController.text}));
+        uiF('Customer: {customer}', {'customer': _nameController.text.isEmpty ? 'N/A' : _nameController.text}));
     for (final item in _items) {
       buffer.writeln(
           '${item.name} x${item.qty}${item.saleUnit.isEmpty ? '' : ' ${item.saleUnit}'} = MMK ${item.amount.toStringAsFixed(2)}');
     }
     buffer.writeln(uiF('Total: MMK {amount}', {'amount': _grandTotal.toStringAsFixed(2)}));
     buffer.writeln(uiF('Paid: MMK {amount}', {'amount': _paid.toStringAsFixed(2)}));
-    buffer.writeln(uiF('Balance: MMK {amount}', {'amount': (_grandTotal - _paid).toStringAsFixed(2)}));
+    buffer.writeln('Balance: MMK ${(_grandTotal - _paid).toStringAsFixed(2)}');
     await Clipboard.setData(ClipboardData(text: buffer.toString()));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -9325,7 +9314,7 @@ class VoucherPreviewCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.center,
                     child: Text(
-                      uiT('VOUCHER'),
+                      'VOUCHER',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -9340,7 +9329,7 @@ class VoucherPreviewCard extends StatelessWidget {
                   // VOUCHER NUMBER
                   // ==================================================
                   Text(
-                    uiF('Voucher No: {voucher}', {'voucher': voucherNumber}),
+                    'Voucher No: $voucherNumber',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 12,
@@ -9358,7 +9347,7 @@ class VoucherPreviewCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          uiF('Prepared For: {customer}', {'customer': customerName.isEmpty ? uiT('John/Jane Doe') : customerName}),
+                          'Prepared For: ${customerName.isEmpty ? 'John/Jane Doe' : customerName}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -9369,7 +9358,7 @@ class VoucherPreviewCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        uiF('Date: {date}', {'date': _formatDateOnly(date)}),
+                        'Date: ${_formatDateOnly(date)}',
                         style: TextStyle(
                           fontSize: 10,
                           color: Colors.grey[600],
@@ -9409,7 +9398,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              uiT('No'),
+                              'No',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9421,7 +9410,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              uiT('Product'),
+                              'Product',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9433,7 +9422,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              uiT('Price'),
+                              'Price',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9445,7 +9434,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              uiT('Qty'),
+                              'Qty',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9457,7 +9446,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              uiT('Amount'),
+                              'Amount',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9595,7 +9584,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              uiT('Total'),
+                              'Total',
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9626,7 +9615,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              uiT('Paid'),
+                              'Paid',
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9657,7 +9646,7 @@ class VoucherPreviewCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(
-                              uiT('Total Left'),
+                              'Total Left',
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -9706,7 +9695,7 @@ class VoucherPreviewCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            uiT('Customer Sign'),
+                            'Customer Sign',
                             style: TextStyle(
                               fontSize: 11,
                             ),
@@ -9755,7 +9744,7 @@ class VoucherPreviewCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            uiT('Seller Sign'),
+                            'Seller Sign',
                             style: TextStyle(
                               fontSize: 11,
                             ),
@@ -11791,7 +11780,7 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                   keyboardType: TextInputType.url,
                   decoration: InputDecoration(
                     labelText: uiT('Server IP address'),
-                    hintText: uiT('Example: 192.168.1.20'),
+                    hintText: 'Example: 192.168.1.20',
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -11920,10 +11909,10 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _copyExport() async {
-    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Only Owner or Admin can export data.')))); return; }
-    final json = await AppData.instance.exportSecureBackup();
+    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can export data.'))); return; }
+    final json = await AppData.instance.exportBackup();
     await Clipboard.setData(ClipboardData(text: json));
-    await SecurityManager.instance.log('Encrypted backup copied to clipboard');
+    await SecurityManager.instance.log('JSON backup copied to clipboard');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -11936,20 +11925,20 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _saveExportFile() async {
-    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Only Owner or Admin can export data.')))); return; }
+    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can export data.'))); return; }
     try {
-      final json = await AppData.instance.exportSecureBackup();
+      final json = await AppData.instance.exportBackup();
       final stamp = DateTime.now()
           .toIso8601String()
           .replaceAll(':', '-')
           .replaceAll('.', '-');
       final uri = await FilePicker.saveFile(
-        fileName: 'pos_backup_$stamp.posbak',
+        fileName: 'pos_backup_$stamp.json',
         bytes: Uint8List.fromList(utf8.encode(json)),
       );
 
       if (mounted && uri != null) {
-        await SecurityManager.instance.log('Encrypted backup exported', detail: uri.toString());
+        await SecurityManager.instance.log('JSON backup exported', detail: uri.toString());
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -11970,7 +11959,7 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _importRaw(String raw) async {
-    if (!SecurityManager.instance.can(PosPermission.restoreBackup)) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Only Owner or Admin can restore a backup.')))); return; }
+    if (!SecurityManager.instance.can(PosPermission.restoreBackup)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can restore a backup.'))); return; }
     final cleaned = raw.replaceFirst('\uFEFF', '').trim();
     if (cleaned.isEmpty) {
       if (mounted) {
@@ -12030,7 +12019,7 @@ class _DataBackupPageState extends State<DataBackupPage> {
     try {
       final file = await FilePicker.pickFile(
         type: FileType.custom,
-        allowedExtensions: const ['json', 'txt', 'posbak'],
+        allowedExtensions: const ['json', 'txt'],
       );
       if (file == null) return;
 
