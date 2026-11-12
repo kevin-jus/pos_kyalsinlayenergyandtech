@@ -9770,6 +9770,294 @@ class VouchersPage extends StatefulWidget {
 }
 
 class _VouchersPageState extends State<VouchersPage> {
+  // ── Filter state ──────────────────────────────────────────────────────
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _query = '';
+  DateTimeRange? _dateRange;
+  RangeValues? _amountRange;
+
+  bool get _hasFilters => _query.trim().isNotEmpty || _dateRange != null || _amountRange != null;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _clearFilters() {
+    _searchCtrl.clear();
+    setState(() {
+      _query = '';
+      _dateRange = null;
+      _amountRange = null;
+    });
+  }
+
+  Future<void> _pickDateRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      initialDateRange: _dateRange,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: PosDashboardScreen.primaryGreen),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) setState(() => _dateRange = picked);
+  }
+
+  Widget _amountBox(String label, double value) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(color: const Color(0xFFF2F4F3), borderRadius: BorderRadius.circular(14)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+            const SizedBox(height: 2),
+            Text(value.toStringAsFixed(2), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
+
+  Future<void> _pickAmountRange(double maxAmount) async {
+    const green = PosDashboardScreen.primaryGreen;
+    final top = maxAmount <= 0 ? 1.0 : maxAmount.ceilToDouble();
+    var values = _amountRange == null
+        ? RangeValues(0, top)
+        : RangeValues(_amountRange!.start.clamp(0.0, top).toDouble(), _amountRange!.end.clamp(0.0, top).toDouble());
+    final result = await showModalBottomSheet<Object?>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 4, 24, 24 + MediaQuery.of(sheetContext).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(uiT('Amount'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(uiT('Show vouchers with a total between'), style: const TextStyle(color: Colors.black54)),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _amountBox(uiT('Min'), values.start)),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: Icon(Icons.remove_rounded, color: Colors.black38),
+                  ),
+                  Expanded(child: _amountBox(uiT('Max'), values.end)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SliderTheme(
+                data: SliderTheme.of(sheetContext).copyWith(
+                  trackHeight: 6,
+                  activeTrackColor: green,
+                  inactiveTrackColor: green.withValues(alpha: .15),
+                  thumbColor: green,
+                  overlayColor: green.withValues(alpha: .12),
+                ),
+                child: RangeSlider(
+                  values: values,
+                  min: 0,
+                  max: top,
+                  onChanged: (v) => setSheet(() => values = v),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () => Navigator.pop(sheetContext, false),
+                      child: Text(uiT('Reset')),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: green,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () => Navigator.pop(sheetContext, values),
+                      child: Text(uiT('Apply')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (result == false) {
+      setState(() => _amountRange = null);
+    } else if (result is RangeValues) {
+      final everything = result.start <= 0 && result.end >= top;
+      setState(() => _amountRange = everything ? null : result);
+    }
+  }
+
+  Widget _filterChip({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+    VoidCallback? onClear,
+  }) {
+    const green = PosDashboardScreen.primaryGreen;
+    return Material(
+      color: active ? green.withValues(alpha: .10) : Colors.white,
+      shape: StadiumBorder(side: BorderSide(color: active ? green : const Color(0xFFD9DEDC))),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(12, 8, active && onClear != null ? 6 : 14, 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: active ? green : Colors.black54),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: active ? green : Colors.black87),
+              ),
+              if (active && onClear != null) ...[
+                const SizedBox(width: 2),
+                InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onClear,
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.close_rounded, size: 16, color: green),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(int shown, int total, double maxAmount) {
+    const green = PosDashboardScreen.primaryGreen;
+    final dateLabel = _dateRange == null
+        ? uiT('Date')
+        : '${_formatDateOnly(_dateRange!.start)} – ${_formatDateOnly(_dateRange!.end)}';
+    final amountLabel = _amountRange == null
+        ? uiT('Amount')
+        : '${_amountRange!.start.toStringAsFixed(0)} – ${_amountRange!.end.toStringAsFixed(0)}';
+    OutlineInputBorder border(Color c, [double w = 0]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w),
+        );
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _query = v),
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: uiT('Search by customer name'),
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                      },
+                    ),
+              filled: true,
+              fillColor: const Color(0xFFF2F4F3),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              border: border(Colors.transparent),
+              enabledBorder: border(Colors.transparent),
+              focusedBorder: border(green, 1.5),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _filterChip(
+                  icon: Icons.calendar_month_rounded,
+                  label: dateLabel,
+                  active: _dateRange != null,
+                  onTap: _pickDateRange,
+                  onClear: () => setState(() => _dateRange = null),
+                ),
+                const SizedBox(width: 8),
+                _filterChip(
+                  icon: Icons.payments_rounded,
+                  label: amountLabel,
+                  active: _amountRange != null,
+                  onTap: () => _pickAmountRange(maxAmount),
+                  onClear: () => setState(() => _amountRange = null),
+                ),
+                if (_hasFilters) ...[
+                  const SizedBox(width: 4),
+                  TextButton(
+                    onPressed: _clearFilters,
+                    style: TextButton.styleFrom(foregroundColor: green),
+                    child: Text(uiT('Clear all')),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (_hasFilters)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                uiF('{shown} of {total} vouchers', {'shown': shown.toString(), 'total': total.toString()}),
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoMatches() => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off_rounded, size: 56, color: Colors.black26),
+              const SizedBox(height: 12),
+              Text(uiT('No vouchers match your filters'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              OutlinedButton(onPressed: _clearFilters, child: Text(uiT('Clear filters'))),
+            ],
+          ),
+        ),
+      );
+
   void _openVoucher(Voucher v) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => VoucherDetailPage(voucher: v)));
     if (mounted) setState(() {});
@@ -9787,10 +10075,29 @@ class _VouchersPageState extends State<VouchersPage> {
   }
 
   @override Widget build(BuildContext context) {
-    final vouchers = List<Voucher>.from(AppData.instance.vouchers)..sort((a,b) => b.date.compareTo(a.date));
+    final allVouchers = List<Voucher>.from(AppData.instance.vouchers)..sort((a,b) => b.date.compareTo(a.date));
+    final maxAmount = allVouchers.fold<double>(0, (m, v) { final t = AppData.instance.totalForSale(v.voucherNumber); return t > m ? t : m; });
+    final q = _query.trim().toLowerCase();
+    final vouchers = allVouchers.where((v) {
+      if (q.isNotEmpty && !v.customerName.toLowerCase().contains(q)) return false;
+      if (_dateRange != null) {
+        final d = DateTime(v.date.year, v.date.month, v.date.day);
+        final from = DateTime(_dateRange!.start.year, _dateRange!.start.month, _dateRange!.start.day);
+        final to = DateTime(_dateRange!.end.year, _dateRange!.end.month, _dateRange!.end.day);
+        if (d.isBefore(from) || d.isAfter(to)) return false;
+      }
+      if (_amountRange != null) {
+        final t = AppData.instance.totalForSale(v.voucherNumber);
+        if (t < _amountRange!.start - .005 || t > _amountRange!.end + .005) return false;
+      }
+      return true;
+    }).toList();
     return Scaffold(
       appBar: AppBar(title: Text(uiT(widget.title)), backgroundColor: PosDashboardScreen.primaryGreen, foregroundColor: Colors.white),
-      body: vouchers.isEmpty ? Center(child: Text(uiT('No vouchers saved yet. Create one from the Sale page.'))) : ListView.separated(
+      body: allVouchers.isEmpty ? Center(child: Text(uiT('No vouchers saved yet. Create one from the Sale page.'))) : Column(children: [
+        _buildFilterBar(vouchers.length, allVouchers.length, maxAmount),
+        const Divider(height: 1),
+        Expanded(child: vouchers.isEmpty ? _buildNoMatches() : ListView.separated(
         padding: const EdgeInsets.all(12), itemCount: vouchers.length, separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context,index) {
           final v=vouchers[index]; final total=AppData.instance.totalForSale(v.voucherNumber); final paidAmount=AppData.instance.paidForSale(v.voucherNumber); final balance=(total-paidAmount).clamp(0,double.infinity).toDouble(); final paid=paidAmount>0 && balance>0.005; final settled=balance<=.005;
@@ -9814,7 +10121,8 @@ class _VouchersPageState extends State<VouchersPage> {
             onTap: () => _openVoucher(v),
           );
         },
-      ),
+      )),
+      ]),
     );
   }
 }
