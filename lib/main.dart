@@ -8,7 +8,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'pos_database.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -17,6 +19,7 @@ import 'package:pdf_text_shaper/pdf_text_shaper.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:gal/gal.dart';
+
 import 'ui_translation.dart';
 import 'wifi_sync.dart';
 import 'security.dart';
@@ -29,7 +32,8 @@ void main() async {
   await UiTranslation.load();
   await SecurityManager.instance.initialize();
   await AppData.instance.load();
-  SecurityManager.instance.onSyncableChange = AppData.instance.notifySecurityChanged;
+  SecurityManager.instance.onSyncableChange =
+      AppData.instance.notifySecurityChanged;
   await AppData.instance.wifiSync.initialize();
   runApp(const MyApp());
 }
@@ -59,6 +63,133 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'POS System',
       theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: PosDashboardScreen.primaryGreen,
+          brightness: Brightness.light,
+          primary: PosDashboardScreen.primaryGreen,
+          secondary: const Color(0xFF2D7D5C),
+          surface: const Color(0xFFFFFCF8),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF2F2F7),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF1C1C1E),
+          centerTitle: false,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+        ),
+        cardTheme: const CardThemeData(
+          color: Colors.white,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+            side: BorderSide(color: Color(0x00000000)),
+          ),
+        ),
+        dialogTheme: const DialogThemeData(
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(24)),
+          ),
+        ),
+        listTileTheme: ListTileThemeData(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 5,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          iconColor: PosDashboardScreen.primaryGreen,
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Color(0xFFE0E8E2),
+          space: 1,
+          thickness: 1,
+        ),
+        dataTableTheme: const DataTableThemeData(
+          headingRowColor: WidgetStatePropertyAll(Color(0xFFF0F6F1)),
+          headingTextStyle: TextStyle(
+            color: Color(0xFF183B29),
+            fontWeight: FontWeight.w700,
+          ),
+          dataRowMinHeight: 52,
+          dataRowMaxHeight: 64,
+          horizontalMargin: 18,
+          columnSpacing: 20,
+          dividerThickness: 1,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFF2F2F7),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: PosDashboardScreen.primaryGreen,
+              width: 2,
+            ),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: PosDashboardScreen.primaryGreen,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            minimumSize: const Size(0, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: PosDashboardScreen.primaryGreen,
+            minimumSize: const Size(0, 48),
+            side: const BorderSide(color: Color(0xFF9BB7A6)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: PosDashboardScreen.primaryGreen,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: PosDashboardScreen.primaryGreen,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+        ),
         // Keep Burmese/Myanmar glyphs available throughout the Flutter UI while
         // still allowing Latin text and numbers to render normally. The first
         // family is preferred when installed/bundled by the platform.
@@ -154,52 +285,51 @@ class Product {
   String saleConsumptionMode;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'type': type,
-        'subType': subType,
-        'measurement': measurement,
-        'incomingUnit': incomingUnit,
-        'saleUnit': saleUnit,
-        'stock': stock,
-        'sellingPrice1': sellingPrice1,
-        'sellingPrice2': sellingPrice2,
-        'sellingPrice3': sellingPrice3,
-        'cost': cost,
-        'supplier': supplier,
-        'lastIncomingDate': lastIncomingDate?.toIso8601String(),
-        'subtractFromParentStock': subtractFromParentStock,
-        'parentProductId': parentProductId,
-        'incomingStockUnitsPerInput': incomingStockUnitsPerInput,
-        'saleStockUnitsPerUnit': saleStockUnitsPerUnit,
-        'saleConsumptionMode': saleConsumptionMode,
-      };
+    'id': id,
+    'name': name,
+    'type': type,
+    'subType': subType,
+    'measurement': measurement,
+    'incomingUnit': incomingUnit,
+    'saleUnit': saleUnit,
+    'stock': stock,
+    'sellingPrice1': sellingPrice1,
+    'sellingPrice2': sellingPrice2,
+    'sellingPrice3': sellingPrice3,
+    'cost': cost,
+    'supplier': supplier,
+    'lastIncomingDate': lastIncomingDate?.toIso8601String(),
+    'subtractFromParentStock': subtractFromParentStock,
+    'parentProductId': parentProductId,
+    'incomingStockUnitsPerInput': incomingStockUnitsPerInput,
+    'saleStockUnitsPerUnit': saleStockUnitsPerUnit,
+    'saleConsumptionMode': saleConsumptionMode,
+  };
 
   factory Product.fromJson(Map<String, dynamic> j) => Product(
-        id: j['id'] as String? ?? AppData.newId(),
-        name: j['name'] as String? ?? '',
-        type: j['type'] as String? ?? '',
-        subType: j['subType'] as String? ?? '',
-        measurement: j['measurement'] as String? ?? '',
-        incomingUnit: j['incomingUnit'] as String? ??
-            (j['measurement'] as String? ?? 'unit'),
-        saleUnit: j['saleUnit'] as String? ??
-            (j['subType'] as String? ?? 'unit'),
-        stock: (j['stock'] as num?)?.toDouble() ?? 0,
-        sellingPrice1: (j['sellingPrice1'] as num?)?.toDouble() ?? 0,
-        sellingPrice2: (j['sellingPrice2'] as num?)?.toDouble() ?? 0,
-        sellingPrice3: (j['sellingPrice3'] as num?)?.toDouble() ?? 0,
-        cost: (j['cost'] as num?)?.toDouble() ?? 0,
-        supplier: j['supplier'] as String? ?? '',
-        lastIncomingDate: _parseDateTime(j['lastIncomingDate']),
-        subtractFromParentStock: j['subtractFromParentStock'] as bool? ?? false,
-        parentProductId: j['parentProductId'] as String? ?? '',
-        incomingStockUnitsPerInput:
-            (j['incomingStockUnitsPerInput'] as num?)?.toDouble() ?? 1,
-        saleStockUnitsPerUnit:
-            (j['saleStockUnitsPerUnit'] as num?)?.toDouble() ?? 1,
-        saleConsumptionMode: j['saleConsumptionMode'] as String? ?? 'fixed',
-      );
+    id: j['id'] as String? ?? AppData.newId(),
+    name: j['name'] as String? ?? '',
+    type: j['type'] as String? ?? '',
+    subType: j['subType'] as String? ?? '',
+    measurement: j['measurement'] as String? ?? '',
+    incomingUnit:
+        j['incomingUnit'] as String? ?? (j['measurement'] as String? ?? 'unit'),
+    saleUnit: j['saleUnit'] as String? ?? (j['subType'] as String? ?? 'unit'),
+    stock: (j['stock'] as num?)?.toDouble() ?? 0,
+    sellingPrice1: (j['sellingPrice1'] as num?)?.toDouble() ?? 0,
+    sellingPrice2: (j['sellingPrice2'] as num?)?.toDouble() ?? 0,
+    sellingPrice3: (j['sellingPrice3'] as num?)?.toDouble() ?? 0,
+    cost: (j['cost'] as num?)?.toDouble() ?? 0,
+    supplier: j['supplier'] as String? ?? '',
+    lastIncomingDate: _parseDateTime(j['lastIncomingDate']),
+    subtractFromParentStock: j['subtractFromParentStock'] as bool? ?? false,
+    parentProductId: j['parentProductId'] as String? ?? '',
+    incomingStockUnitsPerInput:
+        (j['incomingStockUnitsPerInput'] as num?)?.toDouble() ?? 1,
+    saleStockUnitsPerUnit:
+        (j['saleStockUnitsPerUnit'] as num?)?.toDouble() ?? 1,
+    saleConsumptionMode: j['saleConsumptionMode'] as String? ?? 'fixed',
+  );
 }
 
 class Person {
@@ -218,18 +348,18 @@ class Person {
   String get type => '';
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'category': category,
-        'phone': phone,
-        'address': address,
-      };
+    'name': name,
+    'category': category,
+    'phone': phone,
+    'address': address,
+  };
 
   factory Person.fromJson(Map<String, dynamic> j) => Person(
-        name: j['name'] as String? ?? '',
-        category: j['category'] as String? ?? 'Customer',
-        phone: j['phone'] as String? ?? '',
-        address: j['address'] as String? ?? '',
-      );
+    name: j['name'] as String? ?? '',
+    category: j['category'] as String? ?? 'Customer',
+    phone: j['phone'] as String? ?? '',
+    address: j['address'] as String? ?? '',
+  );
 }
 
 class SaleItem {
@@ -268,41 +398,42 @@ class SaleItem {
 
   String get name => product;
   double get price => sellingPrice;
-  num get qty => quantity == quantity.roundToDouble()
-      ? quantity.toInt()
-      : quantity;
+  num get qty =>
+      quantity == quantity.roundToDouble() ? quantity.toInt() : quantity;
 
   Map<String, dynamic> toJson() => {
-        'saleVoucherNumber': saleVoucherNumber,
-        'product': product,
-        'productId': productId,
-        'quantity': quantity,
-        'sellingPrice': sellingPrice,
-        'profit': profit,
-        'saleUnit': saleUnit,
-        'inventoryProductId': inventoryProductId,
-        'stockDeduction': stockDeduction,
-      };
+    'saleVoucherNumber': saleVoucherNumber,
+    'product': product,
+    'productId': productId,
+    'quantity': quantity,
+    'sellingPrice': sellingPrice,
+    'profit': profit,
+    'saleUnit': saleUnit,
+    'inventoryProductId': inventoryProductId,
+    'stockDeduction': stockDeduction,
+  };
 
   factory SaleItem.fromJson(
     Map<String, dynamic> j, {
     String? fallbackVoucherNumber,
   }) => SaleItem(
-        saleVoucherNumber:
-            j['saleVoucherNumber'] as String? ?? fallbackVoucherNumber ?? '',
-        product: j['product'] as String? ?? j['name'] as String? ?? '',
-        productId: j['productId'] as String? ?? '',
-        quantity: (j['quantity'] as num?)?.toDouble() ??
-            (j['qty'] as num?)?.toDouble() ??
-            0,
-        sellingPrice: (j['sellingPrice'] as num?)?.toDouble() ??
-            (j['price'] as num?)?.toDouble() ??
-            0,
-        profit: (j['profit'] as num?)?.toDouble() ?? 0,
-        saleUnit: j['saleUnit'] as String? ?? '',
-        inventoryProductId: j['inventoryProductId'] as String? ?? '',
-        stockDeduction: (j['stockDeduction'] as num?)?.toDouble() ?? 0,
-      );
+    saleVoucherNumber:
+        j['saleVoucherNumber'] as String? ?? fallbackVoucherNumber ?? '',
+    product: j['product'] as String? ?? j['name'] as String? ?? '',
+    productId: j['productId'] as String? ?? '',
+    quantity:
+        (j['quantity'] as num?)?.toDouble() ??
+        (j['qty'] as num?)?.toDouble() ??
+        0,
+    sellingPrice:
+        (j['sellingPrice'] as num?)?.toDouble() ??
+        (j['price'] as num?)?.toDouble() ??
+        0,
+    profit: (j['profit'] as num?)?.toDouble() ?? 0,
+    saleUnit: j['saleUnit'] as String? ?? '',
+    inventoryProductId: j['inventoryProductId'] as String? ?? '',
+    stockDeduction: (j['stockDeduction'] as num?)?.toDouble() ?? 0,
+  );
 }
 
 class Sale {
@@ -328,27 +459,24 @@ class Sale {
   String get customerName => customer;
 
   Map<String, dynamic> toJson() => {
-        'voucherNumber': voucherNumber,
-        'customer': customer,
-        'date': date.toIso8601String(),
-        'paid': paid,
-        'paymentMethod': paymentMethod,
-        'cylinderLedger': cylinderLedger,
-        'paymentDate': paymentDate?.toIso8601String(),
-      };
+    'voucherNumber': voucherNumber,
+    'customer': customer,
+    'date': date.toIso8601String(),
+    'paid': paid,
+    'paymentMethod': paymentMethod,
+    'cylinderLedger': cylinderLedger,
+    'paymentDate': paymentDate?.toIso8601String(),
+  };
 
   factory Sale.fromJson(Map<String, dynamic> j) => Sale(
-        voucherNumber:
-            j['voucherNumber'] as String? ?? j['id'] as String? ?? '',
-        customer: j['customer'] as String? ??
-            j['customerName'] as String? ??
-            '',
-        date: _parseDateTime(j['date']) ?? DateTime.now(),
-        paid: (j['paid'] as num?)?.toDouble() ?? 0,
-        paymentMethod: j['paymentMethod'] as String? ?? '',
-        cylinderLedger: j['cylinderLedger'] as String? ?? '',
-        paymentDate: _parseDateTime(j['paymentDate']),
-      );
+    voucherNumber: j['voucherNumber'] as String? ?? j['id'] as String? ?? '',
+    customer: j['customer'] as String? ?? j['customerName'] as String? ?? '',
+    date: _parseDateTime(j['date']) ?? DateTime.now(),
+    paid: (j['paid'] as num?)?.toDouble() ?? 0,
+    paymentMethod: j['paymentMethod'] as String? ?? '',
+    cylinderLedger: j['cylinderLedger'] as String? ?? '',
+    paymentDate: _parseDateTime(j['paymentDate']),
+  );
 }
 
 typedef Voucher = Sale;
@@ -367,18 +495,18 @@ class Expense {
   double amount;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'date': date.toIso8601String(),
-        'reason': reason,
-        'amount': amount,
-      };
+    'id': id,
+    'date': date.toIso8601String(),
+    'reason': reason,
+    'amount': amount,
+  };
 
   factory Expense.fromJson(Map<String, dynamic> j) => Expense(
-        id: j['id'] as String? ?? AppData.newId(),
-        date: _parseDateTime(j['date']) ?? DateTime.now(),
-        reason: j['reason'] as String? ?? '',
-        amount: (j['amount'] as num?)?.toDouble() ?? 0,
-      );
+    id: j['id'] as String? ?? AppData.newId(),
+    date: _parseDateTime(j['date']) ?? DateTime.now(),
+    reason: j['reason'] as String? ?? '',
+    amount: (j['amount'] as num?)?.toDouble() ?? 0,
+  );
 }
 
 class IncomingSupply {
@@ -421,19 +549,19 @@ class IncomingSupply {
   bool get paid => balance <= 0.005;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'productId': productId,
-        'product': product,
-        'supplier': supplier,
-        'date': date.toIso8601String(),
-        'quantity': quantity,
-        'costPerUnit': costPerUnit,
-        'inputUnit': inputUnit,
-        'stockAdded': stockAdded,
-        'paidAmount': paidAmount,
-        'paymentDate': paymentDate?.toIso8601String(),
-        'paid': paid,
-      };
+    'id': id,
+    'productId': productId,
+    'product': product,
+    'supplier': supplier,
+    'date': date.toIso8601String(),
+    'quantity': quantity,
+    'costPerUnit': costPerUnit,
+    'inputUnit': inputUnit,
+    'stockAdded': stockAdded,
+    'paidAmount': paidAmount,
+    'paymentDate': paymentDate?.toIso8601String(),
+    'paid': paid,
+  };
 
   factory IncomingSupply.fromJson(Map<String, dynamic> j) {
     final quantity = (j['quantity'] as num?)?.toDouble() ?? 0;
@@ -478,14 +606,14 @@ class PaymentTransaction {
   bool get isAdjustment => amount < 0;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'linkedType': linkedType,
-        'linkedId': linkedId,
-        'amount': amount,
-        'date': date.toIso8601String(),
-        'method': method,
-        'note': note,
-      };
+    'id': id,
+    'linkedType': linkedType,
+    'linkedId': linkedId,
+    'amount': amount,
+    'date': date.toIso8601String(),
+    'method': method,
+    'note': note,
+  };
 
   factory PaymentTransaction.fromJson(Map<String, dynamic> j) =>
       PaymentTransaction(
@@ -517,22 +645,22 @@ class LedgerEntry {
   String type;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'note': note,
-        'amount': amount,
-        'date': date.toIso8601String(),
-        'type': type,
-      };
+    'id': id,
+    'name': name,
+    'note': note,
+    'amount': amount,
+    'date': date.toIso8601String(),
+    'type': type,
+  };
 
   factory LedgerEntry.fromJson(Map<String, dynamic> j) => LedgerEntry(
-        id: j['id'] as String? ?? AppData.newId(),
-        name: j['name'] as String? ?? '',
-        note: j['note'] as String? ?? '',
-        amount: (j['amount'] as num?)?.toDouble() ?? 0,
-        date: _parseDateTime(j['date']) ?? DateTime.now(),
-        type: j['type'] as String? ?? '',
-      );
+    id: j['id'] as String? ?? AppData.newId(),
+    name: j['name'] as String? ?? '',
+    note: j['note'] as String? ?? '',
+    amount: (j['amount'] as num?)?.toDouble() ?? 0,
+    date: _parseDateTime(j['date']) ?? DateTime.now(),
+    type: j['type'] as String? ?? '',
+  );
 }
 
 class CylinderRowData {
@@ -553,24 +681,23 @@ class CylinderRowData {
   String toGiveBackQty;
 
   Map<String, dynamic> toJson() => {
-        'no': no,
-        'name': name,
-        'toReceiveProduct': toReceiveProduct,
-        'toReceiveQty': toReceiveQty,
-        'toGiveBackProduct': toGiveBackProduct,
-        'toGiveBackQty': toGiveBackQty,
-      };
+    'no': no,
+    'name': name,
+    'toReceiveProduct': toReceiveProduct,
+    'toReceiveQty': toReceiveQty,
+    'toGiveBackProduct': toGiveBackProduct,
+    'toGiveBackQty': toGiveBackQty,
+  };
 
   factory CylinderRowData.fromJson(Map<String, dynamic> j) => CylinderRowData(
-        no: (j['no'] as num?)?.toInt() ?? 0,
-        name: j['name'] as String? ?? '',
-        toReceiveProduct: j['toReceiveProduct'] as String? ?? '',
-        toReceiveQty: j['toReceiveQty'] as String? ?? '',
-        toGiveBackProduct: j['toGiveBackProduct'] as String? ?? '',
-        toGiveBackQty: j['toGiveBackQty'] as String? ?? '',
-      );
+    no: (j['no'] as num?)?.toInt() ?? 0,
+    name: j['name'] as String? ?? '',
+    toReceiveProduct: j['toReceiveProduct'] as String? ?? '',
+    toReceiveQty: j['toReceiveQty'] as String? ?? '',
+    toGiveBackProduct: j['toGiveBackProduct'] as String? ?? '',
+    toGiveBackQty: j['toGiveBackQty'] as String? ?? '',
+  );
 }
-
 
 class CylinderType {
   CylinderType({
@@ -589,20 +716,21 @@ class CylinderType {
   double totalQuantity;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'baseType': baseType,
-        'name': name,
-        'totalQuantity': totalQuantity,
-      };
+    'id': id,
+    'baseType': baseType,
+    'name': name,
+    'totalQuantity': totalQuantity,
+  };
 
   factory CylinderType.fromJson(Map<String, dynamic> j) => CylinderType(
-      id: j['id'] as String? ?? AppData.newId(),
-      baseType: j['baseType'] as String? ?? '48kg',
-      name: j['name'] as String? ?? '',
-      totalQuantity: (j['totalQuantity'] as num?)?.toDouble() ??
-          (j['quantityInOurPossession'] as num?)?.toDouble() ??
-          0,
-    );
+    id: j['id'] as String? ?? AppData.newId(),
+    baseType: j['baseType'] as String? ?? '48kg',
+    name: j['name'] as String? ?? '',
+    totalQuantity:
+        (j['totalQuantity'] as num?)?.toDouble() ??
+        (j['quantityInOurPossession'] as num?)?.toDouble() ??
+        0,
+  );
 }
 
 class CylinderCycle {
@@ -627,28 +755,30 @@ class CylinderCycle {
   double get balance => givenQuantity - receivedQuantity;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'cylinderTypeId': cylinderTypeId,
-        'customer': customer,
-        'product': product,
-        'givenQuantity': givenQuantity,
-        'receivedQuantity': receivedQuantity,
-        'date': date.toIso8601String(),
-      };
+    'id': id,
+    'cylinderTypeId': cylinderTypeId,
+    'customer': customer,
+    'product': product,
+    'givenQuantity': givenQuantity,
+    'receivedQuantity': receivedQuantity,
+    'date': date.toIso8601String(),
+  };
 
   factory CylinderCycle.fromJson(Map<String, dynamic> j) => CylinderCycle(
-        id: j['id'] as String? ?? AppData.newId(),
-        cylinderTypeId: j['cylinderTypeId'] as String? ?? '',
-        customer: j['customer'] as String? ?? '',
-        product: j['product'] as String? ?? '48 kg',
-        givenQuantity: (j['givenQuantity'] as num?)?.toDouble() ??
-            (j['giveQuantity'] as num?)?.toDouble() ??
-            0,
-        receivedQuantity: (j['receivedQuantity'] as num?)?.toDouble() ??
-            (j['receiveQuantity'] as num?)?.toDouble() ??
-            0,
-        date: _parseDateTime(j['date']) ?? DateTime.now(),
-      );
+    id: j['id'] as String? ?? AppData.newId(),
+    cylinderTypeId: j['cylinderTypeId'] as String? ?? '',
+    customer: j['customer'] as String? ?? '',
+    product: j['product'] as String? ?? '48 kg',
+    givenQuantity:
+        (j['givenQuantity'] as num?)?.toDouble() ??
+        (j['giveQuantity'] as num?)?.toDouble() ??
+        0,
+    receivedQuantity:
+        (j['receivedQuantity'] as num?)?.toDouble() ??
+        (j['receiveQuantity'] as num?)?.toDouble() ??
+        0,
+    date: _parseDateTime(j['date']) ?? DateTime.now(),
+  );
 }
 
 // =====================================================================
@@ -712,8 +842,10 @@ class AppData {
   final List<LedgerEntry> incomeExpenseEntries = [];
 
   // Legacy table data is kept for backup compatibility.
-  List<CylinderRowData> cylinderRows =
-      List.generate(17, (i) => CylinderRowData(no: i + 1));
+  List<CylinderRowData> cylinderRows = List.generate(
+    17,
+    (i) => CylinderRowData(no: i + 1),
+  );
 
   final List<CylinderType> cylinderTypes = [];
   final List<CylinderCycle> cylinderCycles = [];
@@ -727,20 +859,18 @@ class AppData {
   List<Sale> get vouchers => sales;
 
   Map<String, dynamic> _snapshot() => {
-        'products': products.map((p) => p.toJson()).toList(),
-        'people': people.map((p) => p.toJson()).toList(),
-        'sales': sales.map((s) => s.toJson()).toList(),
-        'saleItems': saleItems.map((i) => i.toJson()).toList(),
-        'incomingSupplies':
-            incomingSupplies.map((s) => s.toJson()).toList(),
-        'paymentTransactions':
-            paymentTransactions.map((p) => p.toJson()).toList(),
-        'expenses': expenses.map((e) => e.toJson()).toList(),
-        'incomeExpense': incomeExpenseEntries.map((e) => e.toJson()).toList(),
-        'cylinderRows': cylinderRows.map((r) => r.toJson()).toList(),
-        'cylinderTypes': cylinderTypes.map((t) => t.toJson()).toList(),
-        'cylinderCycles': cylinderCycles.map((c) => c.toJson()).toList(),
-      };
+    'products': products.map((p) => p.toJson()).toList(),
+    'people': people.map((p) => p.toJson()).toList(),
+    'sales': sales.map((s) => s.toJson()).toList(),
+    'saleItems': saleItems.map((i) => i.toJson()).toList(),
+    'incomingSupplies': incomingSupplies.map((s) => s.toJson()).toList(),
+    'paymentTransactions': paymentTransactions.map((p) => p.toJson()).toList(),
+    'expenses': expenses.map((e) => e.toJson()).toList(),
+    'incomeExpense': incomeExpenseEntries.map((e) => e.toJson()).toList(),
+    'cylinderRows': cylinderRows.map((r) => r.toJson()).toList(),
+    'cylinderTypes': cylinderTypes.map((t) => t.toJson()).toList(),
+    'cylinderCycles': cylinderCycles.map((c) => c.toJson()).toList(),
+  };
 
   void _replaceStateFrom(AppData source) {
     products
@@ -779,9 +909,9 @@ class AppData {
   /// Public bridge used by the Wi-Fi synchronization layer. SQLite is updated
   /// first; the in-memory model changes only after the durable write succeeds.
   Map<String, dynamic> snapshotForSync() => {
-        ..._snapshot(),
-        ...SecurityManager.instance.syncSnapshot(),
-      };
+    ..._snapshot(),
+    ...SecurityManager.instance.syncSnapshot(),
+  };
 
   /// Called when users/roles/PINs or the admin log change locally.
   void notifySecurityChanged() {
@@ -868,15 +998,17 @@ class AppData {
     products
       ..clear()
       ..addAll(
-        ((map['products'] as List?) ?? [])
-            .map((e) => Product.fromJson(e as Map<String, dynamic>)),
+        ((map['products'] as List?) ?? []).map(
+          (e) => Product.fromJson(e as Map<String, dynamic>),
+        ),
       );
 
     people
       ..clear()
       ..addAll(
-        ((map['people'] as List?) ?? [])
-            .map((e) => Person.fromJson(e as Map<String, dynamic>)),
+        ((map['people'] as List?) ?? []).map(
+          (e) => Person.fromJson(e as Map<String, dynamic>),
+        ),
       );
 
     _migrateProductInventorySettings();
@@ -893,9 +1025,7 @@ class AppData {
       );
       if (newSaleItems != null) {
         saleItems.addAll(
-          newSaleItems.map(
-            (e) => SaleItem.fromJson(e as Map<String, dynamic>),
-          ),
+          newSaleItems.map((e) => SaleItem.fromJson(e as Map<String, dynamic>)),
         );
       }
     } else {
@@ -930,7 +1060,8 @@ class AppData {
       if (item.saleUnit.trim().isEmpty) {
         if (product.saleConsumptionMode == 'kg_or_viss') {
           final measurement = product.measurement.toLowerCase();
-          item.saleUnit = measurement.contains('viss') || measurement.contains('ပိသာ')
+          item.saleUnit =
+              measurement.contains('viss') || measurement.contains('ပိသာ')
               ? 'viss'
               : 'kg';
         } else {
@@ -972,7 +1103,8 @@ class AppData {
               : product.incomingUnit.trim();
         }
         if (supply.stockAdded <= 0) {
-          supply.stockAdded = supply.quantity *
+          supply.stockAdded =
+              supply.quantity *
               (product.incomingStockUnitsPerInput > 0
                   ? product.incomingStockUnitsPerInput
                   : 1);
@@ -1001,8 +1133,9 @@ class AppData {
     incomeExpenseEntries
       ..clear()
       ..addAll(
-        ((map['incomeExpense'] as List?) ?? [])
-            .map((e) => LedgerEntry.fromJson(e as Map<String, dynamic>)),
+        ((map['incomeExpense'] as List?) ?? []).map(
+          (e) => LedgerEntry.fromJson(e as Map<String, dynamic>),
+        ),
       );
 
     if (expenses.isEmpty) {
@@ -1111,7 +1244,9 @@ class AppData {
       }
       if (product.saleUnit.trim().isEmpty) {
         product.saleUnit = product.subType.trim().isEmpty
-            ? (product.measurement.trim().isEmpty ? 'unit' : product.measurement.trim())
+            ? (product.measurement.trim().isEmpty
+                  ? 'unit'
+                  : product.measurement.trim())
             : product.subType.trim();
       }
       if (product.incomingStockUnitsPerInput <= 0) {
@@ -1127,7 +1262,10 @@ class AppData {
   static String _normalizeSaleUnit(String raw) {
     final value = raw.trim().toLowerCase();
     if (value == 'viss' || value == 'vis' || value == 'ပိသာ') return 'viss';
-    if (value == 'kg' || value == 'kgs' || value == 'kilogram' || value == 'kilograms') {
+    if (value == 'kg' ||
+        value == 'kgs' ||
+        value == 'kilogram' ||
+        value == 'kilograms') {
       return 'kg';
     }
     return raw.trim();
@@ -1152,11 +1290,7 @@ class AppData {
           baseType: '48kg',
           name: '48 kg',
         ),
-        CylinderType(
-          id: 'default-cylinder-10v',
-          baseType: '10v',
-          name: '10v',
-        ),
+        CylinderType(id: 'default-cylinder-10v', baseType: '10v', name: '10v'),
       ]);
     }
 
@@ -1234,10 +1368,7 @@ class AppData {
         rootScaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(uiT('Save failed. Your last saved data was kept.')),
-            action: SnackBarAction(
-              label: uiT('OK'),
-              onPressed: () {},
-            ),
+            action: SnackBarAction(label: uiT('OK'), onPressed: () {}),
           ),
         );
         return false;
@@ -1343,12 +1474,18 @@ class AppData {
     cylinderTypes
       ..clear()
       ..addAll([
-        CylinderType(id: 'default-cylinder-48kg', baseType: '48kg', name: '48 kg'),
+        CylinderType(
+          id: 'default-cylinder-48kg',
+          baseType: '48kg',
+          name: '48 kg',
+        ),
         CylinderType(id: 'default-cylinder-10v', baseType: '10v', name: '10v'),
       ]);
     cylinderCycles.clear();
     if (!await save()) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1384,10 +1521,12 @@ class AppData {
     product.incomingUnit = product.incomingUnit.trim();
     product.saleUnit = product.saleUnit.trim();
     product.supplier = product.supplier.trim();
-    product.saleConsumptionMode =
-        product.saleConsumptionMode.trim().isEmpty ? 'fixed' : product.saleConsumptionMode.trim();
+    product.saleConsumptionMode = product.saleConsumptionMode.trim().isEmpty
+        ? 'fixed'
+        : product.saleConsumptionMode.trim();
 
-    if (product.type.toLowerCase() == 'lpg' && !product.subtractFromParentStock) {
+    if (product.type.toLowerCase() == 'lpg' &&
+        !product.subtractFromParentStock) {
       product.measurement = 'kg';
       product.incomingUnit = 'kg';
       product.incomingStockUnitsPerInput = 1;
@@ -1401,7 +1540,9 @@ class AppData {
     }
     if (product.subtractFromParentStock) {
       if (product.parentProductId.isEmpty) {
-        throw StateError('Select the parent stock product for this selling variant.');
+        throw StateError(
+          'Select the parent stock product for this selling variant.',
+        );
       }
       final parent = productById(product.parentProductId);
       if (parent == null) {
@@ -1411,9 +1552,12 @@ class AppData {
         throw StateError('A product cannot subtract its own stock.');
       }
       if (parent.subtractFromParentStock) {
-        throw StateError('A selling variant cannot use another selling variant as its parent. Choose the main stock product.');
+        throw StateError(
+          'A selling variant cannot use another selling variant as its parent. Choose the main stock product.',
+        );
       }
-      if (product.saleConsumptionMode == 'fixed' && product.saleStockUnitsPerUnit <= 0) {
+      if (product.saleConsumptionMode == 'fixed' &&
+          product.saleStockUnitsPerUnit <= 0) {
         throw StateError('Stock used per sale unit must be greater than zero.');
       }
     } else {
@@ -1423,7 +1567,9 @@ class AppData {
       }
     }
     if (_findDuplicateProduct(product) != null) {
-      throw StateError('A product with the same name, type, and sub type already exists.');
+      throw StateError(
+        'A product with the same name, type, and sub type already exists.',
+      );
     }
 
     product.id = product.id.isEmpty ? newId() : product.id;
@@ -1436,7 +1582,9 @@ class AppData {
     if (!await _tryDatabaseWrite(
       () => _database.upsertProduct(product.toJson()),
     )) {
-      throw StateError('Product could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Product could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1451,10 +1599,12 @@ class AppData {
     updated.incomingUnit = updated.incomingUnit.trim();
     updated.saleUnit = updated.saleUnit.trim();
     updated.supplier = updated.supplier.trim();
-    updated.saleConsumptionMode =
-        updated.saleConsumptionMode.trim().isEmpty ? 'fixed' : updated.saleConsumptionMode.trim();
+    updated.saleConsumptionMode = updated.saleConsumptionMode.trim().isEmpty
+        ? 'fixed'
+        : updated.saleConsumptionMode.trim();
 
-    if (updated.type.toLowerCase() == 'lpg' && !updated.subtractFromParentStock) {
+    if (updated.type.toLowerCase() == 'lpg' &&
+        !updated.subtractFromParentStock) {
       updated.measurement = 'kg';
       updated.incomingUnit = 'kg';
       updated.incomingStockUnitsPerInput = 1;
@@ -1468,15 +1618,22 @@ class AppData {
     }
     if (updated.subtractFromParentStock) {
       if (updated.parentProductId.isEmpty) {
-        throw StateError('Select the parent stock product for this selling variant.');
+        throw StateError(
+          'Select the parent stock product for this selling variant.',
+        );
       }
       final parent = productById(updated.parentProductId);
-      if (parent == null) throw StateError('The selected parent stock product was not found.');
-      if (parent.id == updated.id) throw StateError('A product cannot subtract its own stock.');
+      if (parent == null)
+        throw StateError('The selected parent stock product was not found.');
+      if (parent.id == updated.id)
+        throw StateError('A product cannot subtract its own stock.');
       if (parent.subtractFromParentStock) {
-        throw StateError('A selling variant cannot use another selling variant as its parent. Choose the main stock product.');
+        throw StateError(
+          'A selling variant cannot use another selling variant as its parent. Choose the main stock product.',
+        );
       }
-      if (updated.saleConsumptionMode == 'fixed' && updated.saleStockUnitsPerUnit <= 0) {
+      if (updated.saleConsumptionMode == 'fixed' &&
+          updated.saleStockUnitsPerUnit <= 0) {
         throw StateError('Stock used per sale unit must be greater than zero.');
       }
     } else {
@@ -1484,7 +1641,9 @@ class AppData {
       if (updated.saleStockUnitsPerUnit <= 0) updated.saleStockUnitsPerUnit = 1;
     }
     if (_findDuplicateProduct(updated, excludingId: updated.id) != null) {
-      throw StateError('Another product already has the same name, type, and sub type.');
+      throw StateError(
+        'Another product already has the same name, type, and sub type.',
+      );
     }
 
     final existing = products[index];
@@ -1497,7 +1656,9 @@ class AppData {
     if (!await _tryDatabaseWrite(
       () => _database.upsertProduct(updated.toJson()),
     )) {
-      throw StateError('Product could not be updated. Your previous saved data was kept.');
+      throw StateError(
+        'Product could not be updated. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1516,7 +1677,9 @@ class AppData {
     Product? actualProduct = productById(supply.productId);
     actualProduct ??= _productForSupply(supply);
     if (actualProduct == null) {
-      throw StateError('Select an existing main stock product before recording incoming stock.');
+      throw StateError(
+        'Select an existing main stock product before recording incoming stock.',
+      );
     }
     if (actualProduct.subtractFromParentStock) {
       throw StateError(
@@ -1542,7 +1705,8 @@ class AppData {
           : actualProduct.incomingUnit.trim();
     }
 
-    supply.stockAdded = supply.quantity * actualProduct.incomingStockUnitsPerInput;
+    supply.stockAdded =
+        supply.quantity * actualProduct.incomingStockUnitsPerInput;
 
     // Incoming is the only operation that increases stock.
     actualProduct.stock += supply.stockAdded;
@@ -1593,7 +1757,9 @@ class AppData {
         payment: paymentJson,
       ),
     )) {
-      throw StateError('Incoming product could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Incoming product could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1609,13 +1775,15 @@ class AppData {
 
     final linkedIncoming = incomingSupplies
         .where(
-          (supply) => supply.productId == product.id ||
+          (supply) =>
+              supply.productId == product.id ||
               (supply.productId.isEmpty &&
                   supply.product.toLowerCase() == product.name.toLowerCase()),
         )
         .toList();
     final hasSales = saleItems.any(
-      (item) => item.productId == product.id ||
+      (item) =>
+          item.productId == product.id ||
           (item.productId.isEmpty &&
               item.product.toLowerCase() == product.name.toLowerCase()),
     );
@@ -1630,7 +1798,8 @@ class AppData {
     incomingSupplies.removeWhere((supply) => incomingIds.contains(supply.id));
     paymentTransactions.removeWhere(
       (payment) =>
-          payment.linkedType == 'supply' && incomingIds.contains(payment.linkedId),
+          payment.linkedType == 'supply' &&
+          incomingIds.contains(payment.linkedId),
     );
     products.removeWhere((p) => p.id == product.id);
 
@@ -1640,17 +1809,20 @@ class AppData {
         incomingIds: incomingIds.toList(),
       ),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
   Product? _productForSaleName(String name) {
     final normalized = name.trim().toLowerCase();
     for (final p in products) {
-      final full = [p.name, p.type, p.subType]
-          .where((x) => x.isNotEmpty)
-          .join(' ')
-          .toLowerCase();
+      final full = [
+        p.name,
+        p.type,
+        p.subType,
+      ].where((x) => x.isNotEmpty).join(' ').toLowerCase();
       if (p.name.toLowerCase() == normalized || full == normalized) return p;
     }
     return null;
@@ -1682,7 +1854,9 @@ class AppData {
       final unit = _normalizeSaleUnit(saleUnit);
       if (unit == 'kg') return quantity;
       if (unit == 'viss') return quantity * 1.6;
-      throw StateError('Select whether legacy loose gas is sold by kg or viss.');
+      throw StateError(
+        'Select whether legacy loose gas is sold by kg or viss.',
+      );
     }
 
     final conversion = saleProduct.saleStockUnitsPerUnit > 0
@@ -1698,7 +1872,9 @@ class AppData {
   }) {
     final inventoryProduct = inventoryProductForSale(saleProduct);
     if (inventoryProduct == null) {
-      throw StateError('The selected product is missing its parent stock product.');
+      throw StateError(
+        'The selected product is missing its parent stock product.',
+      );
     }
 
     final deduction = stockConsumptionForSale(
@@ -1726,21 +1902,17 @@ class AppData {
     if (product == null) return;
     final inventoryProduct = inventoryProductForSale(product);
     if (inventoryProduct == null) return;
-    final deduction = stockConsumptionForSale(
-      product,
-      qty,
-      saleUnit: saleUnit,
-    );
+    final deduction = stockConsumptionForSale(product, qty, saleUnit: saleUnit);
     inventoryProduct.stock -= deduction;
   }
 
   // ---- People ----
   Future<void> addPerson(Person p) async {
     people.add(p);
-    if (!await _tryDatabaseWrite(
-      () => _database.insertPerson(p.toJson()),
-    )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+    if (!await _tryDatabaseWrite(() => _database.insertPerson(p.toJson()))) {
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1749,7 +1921,9 @@ class AppData {
     if (!await _tryDatabaseWrite(
       () => _database.deletePerson(person.toJson()),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1842,7 +2016,9 @@ class AppData {
     if (!await _tryDatabaseWrite(
       () => _database.insertPayment(paymentTransactions.last.toJson()),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1850,11 +2026,11 @@ class AppData {
   // Kept as a compatibility alias for older callers. New code should call
   // addIncomingProduct(), which clearly represents an inventory receipt for
   // an existing master product.
-  Future<void> addIncomingSupply(IncomingSupply supply, {String paymentMethod = ''}) {
-    return addIncomingProduct(
-      supply: supply,
-      paymentMethod: paymentMethod,
-    );
+  Future<void> addIncomingSupply(
+    IncomingSupply supply, {
+    String paymentMethod = '',
+  }) {
+    return addIncomingProduct(supply: supply, paymentMethod: paymentMethod);
   }
 
   Product? _productForSupply(IncomingSupply supply) {
@@ -1880,9 +2056,9 @@ class AppData {
       final stockToReverse = supply.stockAdded > 0
           ? supply.stockAdded
           : supply.quantity *
-              (product.incomingStockUnitsPerInput > 0
-                  ? product.incomingStockUnitsPerInput
-                  : 1);
+                (product.incomingStockUnitsPerInput > 0
+                    ? product.incomingStockUnitsPerInput
+                    : 1);
       if (product.stock + 0.000001 < stockToReverse) {
         throw StateError(
           'This incoming record cannot be deleted safely because some of the received stock has already been sold or otherwise consumed.',
@@ -1890,10 +2066,14 @@ class AppData {
       }
       product.stock -= stockToReverse;
       final remaining = incomingSupplies
-          .where((other) => other.id != id &&
-              (other.productId == product.id ||
-                  (other.productId.isEmpty &&
-                      other.product.toLowerCase() == product.name.toLowerCase())))
+          .where(
+            (other) =>
+                other.id != id &&
+                (other.productId == product.id ||
+                    (other.productId.isEmpty &&
+                        other.product.toLowerCase() ==
+                            product.name.toLowerCase())),
+          )
           .toList();
       if (remaining.isEmpty) {
         product.lastIncomingDate = null;
@@ -1909,12 +2089,11 @@ class AppData {
     incomingSupplies.removeAt(index);
 
     if (!await _tryDatabaseWrite(
-      () => _database.deleteIncomingBundle(
-        id: id,
-        product: product?.toJson(),
-      ),
+      () => _database.deleteIncomingBundle(id: id, product: product?.toJson()),
     )) {
-      throw StateError('Incoming product deletion could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Incoming product deletion could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1956,7 +2135,9 @@ class AppData {
         payment: paymentJson,
       ),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -1975,7 +2156,9 @@ class AppData {
 
     for (final item in items) {
       if (item.quantity <= 0) {
-        throw StateError('Quantity for ${item.product} must be greater than zero.');
+        throw StateError(
+          'Quantity for ${item.product} must be greater than zero.',
+        );
       }
       final product = _productForSaleItem(item);
       if (product == null) {
@@ -1997,7 +2180,9 @@ class AppData {
         saleUnit: item.saleUnit,
       );
       if (deduction <= 0) {
-        throw StateError('The stock conversion for "${product.name}" is invalid.');
+        throw StateError(
+          'The stock conversion for "${product.name}" is invalid.',
+        );
       }
 
       final requested =
@@ -2033,7 +2218,12 @@ class AppData {
       item.inventoryProductId = inventoryProduct.id;
       item.stockDeduction = deduction;
       item.profit =
-          item.amount - costAmountForSale(productData, item.quantity, saleUnit: item.saleUnit);
+          item.amount -
+          costAmountForSale(
+            productData,
+            item.quantity,
+            saleUnit: item.saleUnit,
+          );
 
       saleItems.add(item);
       inventoryProduct.stock -= deduction;
@@ -2061,7 +2251,9 @@ class AppData {
 
     final changedProducts = inventoryByProduct.values.toSet().toList();
     final salePayments = paymentTransactions
-        .where((p) => p.linkedType == 'sale' && p.linkedId == sale.voucherNumber)
+        .where(
+          (p) => p.linkedType == 'sale' && p.linkedId == sale.voucherNumber,
+        )
         .map((p) => p.toJson())
         .toList();
     if (!await _tryDatabaseWrite(
@@ -2072,9 +2264,14 @@ class AppData {
         payments: salePayments,
       ),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
-    await SecurityManager.instance.log('Sale recorded', detail: '${sale.voucherNumber} • ${items.length} item(s)');
+    await SecurityManager.instance.log(
+      'Sale recorded',
+      detail: '${sale.voucherNumber} • ${items.length} item(s)',
+    );
   }
 
   Future<void> addVoucher(Sale sale, List<SaleItem> items) =>
@@ -2129,9 +2326,14 @@ class AppData {
         payment: paymentJson,
       ),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
-    await SecurityManager.instance.log('Saved sale changed', detail: '$voucherNumber • payment $current → $target');
+    await SecurityManager.instance.log(
+      'Saved sale changed',
+      detail: '$voucherNumber • payment $current → $target',
+    );
   }
 
   Future<void> deleteSale(String voucherNumber, {bool approved = false}) async {
@@ -2182,7 +2384,9 @@ class AppData {
         products: restoredProducts.map((product) => product.toJson()).toList(),
       ),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
     await SecurityManager.instance.log('Sale deleted', detail: voucherNumber);
   }
@@ -2207,7 +2411,8 @@ class AppData {
         LedgerEntry(
           id: 'supply:${supply.id}',
           name: supply.supplier.isEmpty ? 'Supplier' : supply.supplier,
-          note: '${supply.product} • Qty ${_formatNumber(supply.quantity)} • Total ${_formatNumber(supply.total)} • Paid ${_formatNumber(paidForSupply(supply.id))}',
+          note:
+              '${supply.product} • Qty ${_formatNumber(supply.quantity)} • Total ${_formatNumber(supply.total)} • Paid ${_formatNumber(paidForSupply(supply.id))}',
           amount: amount,
           date: supply.date,
           type: 'payable',
@@ -2231,7 +2436,8 @@ class AppData {
         LedgerEntry(
           id: 'sale:${sale.voucherNumber}',
           name: sale.customer.isEmpty ? 'Customer' : sale.customer,
-          note: 'Voucher ${sale.voucherNumber} • Paid ${_formatNumber(paidForSale(sale.voucherNumber))} / ${_formatNumber(total)}',
+          note:
+              'Voucher ${sale.voucherNumber} • Paid ${_formatNumber(paidForSale(sale.voucherNumber))} / ${_formatNumber(total)}',
           amount: balance,
           date: sale.date,
           type: 'receivable',
@@ -2277,7 +2483,8 @@ class AppData {
           LedgerEntry(
             id: 'payment:${payment.id}',
             name: sale!.customer.isEmpty ? 'Customer sale' : sale.customer,
-            note: 'Sale ${sale.voucherNumber}${payment.method.isNotEmpty ? ' • ${payment.method}' : ''}${payment.note.isNotEmpty ? ' • ${payment.note}' : ''}',
+            note:
+                'Sale ${sale.voucherNumber}${payment.method.isNotEmpty ? ' • ${payment.method}' : ''}${payment.note.isNotEmpty ? ' • ${payment.note}' : ''}',
             amount: payment.amount,
             date: payment.date,
             type: 'income',
@@ -2287,8 +2494,11 @@ class AppData {
         result.add(
           LedgerEntry(
             id: 'payment:${payment.id}',
-            name: supply!.supplier.isEmpty ? 'Supplier payment' : supply.supplier,
-            note: 'Purchase ${supply.product}${payment.method.isNotEmpty ? ' • ${payment.method}' : ''}${payment.note.isNotEmpty ? ' • ${payment.note}' : ''}',
+            name: supply!.supplier.isEmpty
+                ? 'Supplier payment'
+                : supply.supplier,
+            note:
+                'Purchase ${supply.product}${payment.method.isNotEmpty ? ' • ${payment.method}' : ''}${payment.note.isNotEmpty ? ' • ${payment.note}' : ''}',
             amount: payment.amount,
             date: payment.date,
             type: 'expense',
@@ -2312,12 +2522,7 @@ class AppData {
 
     if (e.type == 'expense') {
       expenses.add(
-        Expense(
-          id: e.id,
-          date: e.date,
-          reason: e.name,
-          amount: e.amount,
-        ),
+        Expense(id: e.id, date: e.date, reason: e.name, amount: e.amount),
       );
     }
 
@@ -2329,7 +2534,9 @@ class AppData {
             : null,
       ),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -2354,7 +2561,9 @@ class AppData {
         isExpense: entry?.type == 'expense',
       ),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -2372,17 +2581,22 @@ class AppData {
       throw StateError('Cylinder category must be 48 kg or 10v.');
     }
     final duplicate = cylinderTypes.any(
-      (existing) => existing.baseType == type.baseType &&
+      (existing) =>
+          existing.baseType == type.baseType &&
           existing.name.toLowerCase() == type.name.toLowerCase(),
     );
     if (duplicate) {
-      throw StateError('A cylinder type with this name already exists in this category.');
+      throw StateError(
+        'A cylinder type with this name already exists in this category.',
+      );
     }
     cylinderTypes.add(type);
     if (!await _tryDatabaseWrite(
       () => _database.replaceCylinderTypeBundle(type.toJson()),
     )) {
-      throw StateError('Cylinder type could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Cylinder type could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -2398,17 +2612,17 @@ class AppData {
     if (cylinderTypes.isEmpty) {
       _ensureDefaultCylinderTypes();
     }
-    if (!await _tryDatabaseWrite(
-      () async {
-        await _database.deleteCylinderTypeBundle(id);
-        if (cylinderTypes.isNotEmpty) {
-          for (final type in cylinderTypes) {
-            await _database.replaceCylinderTypeBundle(type.toJson());
-          }
+    if (!await _tryDatabaseWrite(() async {
+      await _database.deleteCylinderTypeBundle(id);
+      if (cylinderTypes.isNotEmpty) {
+        for (final type in cylinderTypes) {
+          await _database.replaceCylinderTypeBundle(type.toJson());
         }
-      },
-    )) {
-      throw StateError('Cylinder type deletion could not be saved. Your previous saved data was kept.');
+      }
+    })) {
+      throw StateError(
+        'Cylinder type deletion could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -2430,14 +2644,18 @@ class AppData {
       () => _database.replaceCylinderTypeBundle(type.toJson()),
     )) {
       type.totalQuantity = oldQuantity;
-      throw StateError('Cylinder quantity could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Cylinder quantity could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
   Future<void> addCylinderCycle(CylinderCycle cycle) async {
     if (cycle.id.isEmpty) cycle.id = newId();
-    if (!cycle.givenQuantity.isFinite || !cycle.receivedQuantity.isFinite ||
-        cycle.givenQuantity < 0 || cycle.receivedQuantity < 0) {
+    if (!cycle.givenQuantity.isFinite ||
+        !cycle.receivedQuantity.isFinite ||
+        cycle.givenQuantity < 0 ||
+        cycle.receivedQuantity < 0) {
       throw StateError('Cylinder quantities cannot be negative.');
     }
 
@@ -2448,8 +2666,8 @@ class AppData {
       throw StateError('Cylinder type not found.');
     }
 
-    final newQuantity = type.totalQuantity +
-        cycle.receivedQuantity - cycle.givenQuantity;
+    final newQuantity =
+        type.totalQuantity + cycle.receivedQuantity - cycle.givenQuantity;
     if (newQuantity < -0.000001) {
       throw StateError(
         'Insufficient ${type.name} stock. Available: '
@@ -2470,7 +2688,9 @@ class AppData {
       if (oldQuantity != null) {
         type.totalQuantity = oldQuantity;
       }
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -2490,16 +2710,15 @@ class AppData {
     }
 
     if (!await _tryDatabaseWrite(
-      () => _database.deleteCylinderCycleBundle(
-        id: id,
-        type: type?.toJson(),
-      ),
+      () => _database.deleteCylinderCycleBundle(id: id, type: type?.toJson()),
     )) {
       cylinderCycles.insert(index, cycle);
       if (oldQuantity != null) {
         type?.totalQuantity = oldQuantity;
       }
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 
@@ -2509,7 +2728,9 @@ class AppData {
         cylinderRows.map((row) => row.toJson()).toList(),
       ),
     )) {
-      throw StateError('Data could not be saved. Your previous saved data was kept.');
+      throw StateError(
+        'Data could not be saved. Your previous saved data was kept.',
+      );
     }
   }
 }
@@ -2523,6 +2744,7 @@ class _DashboardPageButton {
     required this.pageKey,
     required this.labelKey,
     required this.icon,
+    this.accent = const Color(0xFF0F6E3F),
   });
 
   /// Internal navigation identifier. This is never shown to the user.
@@ -2532,27 +2754,40 @@ class _DashboardPageButton {
   final String labelKey;
 
   final IconData icon;
+  final Color accent;
 }
 
 class PosDashboardScreen extends StatelessWidget {
   const PosDashboardScreen({super.key});
 
-  static const Color primaryGreen = Color(0xFF0F6E3F);
-  static const Color sidebarBg = Color(0xFFE2EBE4);
-  static const Color cardBg = Color(0xFFE0E8E1);
-  static const Color textColor = Colors.black87;
+  static const Color primaryGreen = Color(0xFF0B2B1E);
+  static const Color sidebarBg = Color(0xFF0B2B1E);
+  static const Color cardBg = Color(0xFFF2F8F3);
+  static const Color textColor = Color(0xFF18231C);
 
   void _openPage(BuildContext context, String pageKey) {
     final permission = switch (pageKey) {
-      'Products' || 'Instock Products' || 'Incoming Products' || 'Cylinder Cycles' || 'Cylinder Types' => PosPermission.inventory,
+      'Products' ||
+      'Instock Products' ||
+      'Incoming Products' ||
+      'Cylinder Cycles' ||
+      'Cylinder Types' => PosPermission.inventory,
       'Customer' => PosPermission.customers,
-      'Sales Report' || 'Pay Yan' || 'Ya Yan' || 'Income/Expense' || 'Capital' => PosPermission.reports,
+      'Sales Report' ||
+      'Pay Yan' ||
+      'Ya Yan' ||
+      'Income/Expense' ||
+      'Capital' => PosPermission.reports,
       'Data Backup' => PosPermission.exportData,
       'Wi-Fi Sync' || 'Security Center' => PosPermission.security,
       _ => null,
     };
     if (permission != null && !SecurityManager.instance.can(permission)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your role does not have access to this area.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your role does not have access to this area.'),
+        ),
+      );
       return;
     }
     late final Widget targetScreen;
@@ -2606,7 +2841,9 @@ class PosDashboardScreen extends StatelessWidget {
           wifiSync: AppData.instance.wifiSync,
           onOpenWifiSync: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const WifiSyncPage(title: 'Wi-Fi Sync')),
+            MaterialPageRoute(
+              builder: (_) => const WifiSyncPage(title: 'Wi-Fi Sync'),
+            ),
           ),
         );
         break;
@@ -2614,10 +2851,7 @@ class PosDashboardScreen extends StatelessWidget {
         return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => targetScreen),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => targetScreen));
   }
 
   @override
@@ -2632,11 +2866,13 @@ class PosDashboardScreen extends StatelessWidget {
             final bool isPhone = constraints.maxWidth < 600;
 
             return Scaffold(
-              backgroundColor: Colors.white,
+              backgroundColor: const Color(0xFFF1F5F2),
               appBar: AppBar(
-                backgroundColor: primaryGreen,
+                backgroundColor: const Color(0xFF0B2B1E),
                 foregroundColor: Colors.white,
                 elevation: 0,
+                scrolledUnderElevation: 1,
+                surfaceTintColor: Colors.transparent,
                 titleSpacing: 8,
                 leading: Builder(
                   builder: (context) => IconButton(
@@ -2669,7 +2905,11 @@ class PosDashboardScreen extends StatelessWidget {
                   ],
                 ),
                 actions: [
-                  IconButton(tooltip: 'Sign out', icon: const Icon(Icons.logout), onPressed: SecurityManager.instance.logout),
+                  IconButton(
+                    tooltip: 'Sign out',
+                    icon: const Icon(Icons.logout),
+                    onPressed: SecurityManager.instance.logout,
+                  ),
                   IconButton(
                     tooltip: UiTranslation.languageButtonTooltip,
                     icon: const Icon(Icons.translate),
@@ -2681,22 +2921,42 @@ class PosDashboardScreen extends StatelessWidget {
 
               drawer: Drawer(
                 backgroundColor: sidebarBg,
+                surfaceTintColor: Colors.transparent,
                 child: SafeArea(
                   child: ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
-                        child: Text(
-                          uiT('Point of Sale System'),
-                          style: const TextStyle(
-                            color: primaryGreen,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF176B42), Color(0xFF0B2B1E)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.storefront_rounded,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                uiT('Point of Sale System'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const Divider(height: 1),
                       _buildDrawerItem(
                         context,
                         const _DashboardPageButton(
@@ -2822,33 +3082,87 @@ class PosDashboardScreen extends StatelessWidget {
                                     Expanded(
                                       child: Text(
                                         uiError(AppData.instance.loadError!),
-                                        style: const TextStyle(color: Colors.red),
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                          Text.rich(
-                            TextSpan(
-                              style: TextStyle(
-                                fontSize: isPhone ? 18 : 22,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(isPhone ? 20 : 28),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0B2B1E), Color(0xFF167044)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              children: [
-                                TextSpan(text: uiT('Welcome from ')),
-                                TextSpan(
-                                  text: uiT(
-                                    'Kyal Sin Lay Energy & Tech Point of Sale System',
-                                  ),
-                                  style: const TextStyle(color: primaryGreen),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x24134B2D),
+                                  blurRadius: 20,
+                                  offset: Offset(0, 8),
                                 ),
                               ],
                             ),
-                            textAlign: TextAlign.center,
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Icon(
+                                    Icons.storefront_rounded,
+                                    color: Colors.white,
+                                    size: isPhone ? 28 : 34,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text.rich(
+                                    TextSpan(
+                                      style: TextStyle(
+                                        fontSize: isPhone ? 18 : 23,
+                                        height: 1.25,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                      children: [
+                                        TextSpan(text: uiT('Welcome from ')),
+                                        TextSpan(
+                                          text: uiT(
+                                            'Kyal Sin Lay Energy & Tech Point of Sale System',
+                                          ),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Quick access',
+                              style: TextStyle(
+                                color: textColor.withValues(alpha: 0.72),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
 
                           LayoutBuilder(
                             builder: (context, gridConstraints) {
@@ -2857,8 +3171,8 @@ class PosDashboardScreen extends StatelessWidget {
                               final int columns = width < 520
                                   ? 1
                                   : width < 850
-                                      ? 2
-                                      : 3;
+                                  ? 2
+                                  : 3;
 
                               const pageButtons = <_DashboardPageButton>[
                                 _DashboardPageButton(
@@ -2867,16 +3181,19 @@ class PosDashboardScreen extends StatelessWidget {
                                   pageKey: 'Instock Products',
                                   labelKey: 'In-stock Products',
                                   icon: Icons.inventory_2_outlined,
+                                  accent: Color(0xFF167044),
                                 ),
                                 _DashboardPageButton(
                                   pageKey: 'Sale',
                                   labelKey: 'Sale',
                                   icon: Icons.point_of_sale_outlined,
+                                  accent: Color(0xFF1767A6),
                                 ),
                                 _DashboardPageButton(
                                   pageKey: 'Cylinder Cycles',
                                   labelKey: 'Cylinder Cycles',
                                   icon: Icons.propane_tank_outlined,
+                                  accent: Color(0xFF9D5B18),
                                 ),
                               ];
 
@@ -2886,7 +3203,7 @@ class PosDashboardScreen extends StatelessWidget {
                                 mainAxisSpacing: 14,
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                childAspectRatio: isPhone ? 2.4 : 1.45,
+                                childAspectRatio: isPhone ? 2.5 : 1.5,
                                 children: [
                                   for (final pageButton in pageButtons)
                                     _buildMenuCard(context, pageButton),
@@ -2912,16 +3229,17 @@ class PosDashboardScreen extends StatelessWidget {
     _DashboardPageButton pageButton,
   ) {
     return ListTile(
-      leading: Icon(pageButton.icon, color: primaryGreen),
+      leading: Icon(pageButton.icon, color: const Color(0xFF9EE6B8)),
       title: Text(
         uiT(pageButton.labelKey),
         style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: textColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
         ),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       onTap: () {
         Navigator.pop(context);
         _openPage(context, pageButton.pageKey);
@@ -2929,43 +3247,57 @@ class PosDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuCard(
-    BuildContext context,
-    _DashboardPageButton pageButton,
-  ) {
+  Widget _buildMenuCard(BuildContext context, _DashboardPageButton pageButton) {
     return Card(
-      color: cardBg,
-      elevation: 1.5,
+      color: pageButton.accent,
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: pageButton.accent.withValues(alpha: 0.65)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: () => _openPage(context, pageButton.pageKey),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              Icon(
-                pageButton.icon,
-                size: 30,
-                color: primaryGreen,
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  uiT(pageButton.labelKey),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                    height: 1.2,
-                  ),
+              Positioned(
+                right: -20,
+                top: -34,
+                child: Icon(
+                  pageButton.icon,
+                  size: 120,
+                  color: Colors.white.withValues(alpha: 0.10),
                 ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(pageButton.icon, size: 27, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      uiT(pageButton.labelKey),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -2982,62 +3314,95 @@ class PosDashboardScreen extends StatelessWidget {
 class PayYanPage extends StatefulWidget {
   const PayYanPage({super.key, required this.title});
   final String title;
-  @override State<PayYanPage> createState() => _PayYanPageState();
+  @override
+  State<PayYanPage> createState() => _PayYanPageState();
 }
 
 class _PayYanPageState extends State<PayYanPage> {
   Future<void> _pay(IncomingSupply supply) async {
-    final amountCtrl = TextEditingController(text: supply.balance.toStringAsFixed(2));
+    final amountCtrl = TextEditingController(
+      text: supply.balance.toStringAsFixed(2),
+    );
     String method = 'Cash';
     DateTime date = DateTime.now();
     final value = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(uiF('Pay {supplier}', {'supplier': supply.supplier.isEmpty ? uiT('Supplier') : supply.supplier})),
+          title: Text(
+            uiF('Pay {supplier}', {
+              'supplier': supply.supplier.isEmpty
+                  ? uiT('Supplier')
+                  : supply.supplier,
+            }),
+          ),
           content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(uiF('Outstanding: {balance}', {'balance': supply.balance.toStringAsFixed(2)}), style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(labelText: uiT('Payment amount')),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: method,
-                decoration: InputDecoration(labelText: uiT('Payment method')),
-                items: [
-                  DropdownMenuItem(value: 'Cash', child: Text(uiT('Cash'))),
-                  DropdownMenuItem(value: 'Bank', child: Text(uiT('Bank'))),
-                  DropdownMenuItem(value: 'Mobile', child: Text(uiT('Mobile'))),
-                ],
-                onChanged: (v) => setDialogState(() => method = v ?? 'Cash'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: ctx,
-                    initialDate: date,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) setDialogState(() => date = picked);
-                },
-                icon: const Icon(Icons.calendar_today),
-                label: Text(uiF('Payment date {date}', {'date': _formatDateOnly(date)})),
-              ),
-            ]),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  uiF('Outstanding: {balance}', {
+                    'balance': supply.balance.toStringAsFixed(2),
+                  }),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(labelText: uiT('Payment amount')),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: method,
+                  decoration: InputDecoration(labelText: uiT('Payment method')),
+                  items: [
+                    DropdownMenuItem(value: 'Cash', child: Text(uiT('Cash'))),
+                    DropdownMenuItem(value: 'Bank', child: Text(uiT('Bank'))),
+                    DropdownMenuItem(
+                      value: 'Mobile',
+                      child: Text(uiT('Mobile')),
+                    ),
+                  ],
+                  onChanged: (v) => setDialogState(() => method = v ?? 'Cash'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: date,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) setDialogState(() => date = picked);
+                  },
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    uiF('Payment date {date}', {'date': _formatDateOnly(date)}),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(uiT('Cancel'))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(uiT('Cancel')),
+            ),
             ElevatedButton(
               onPressed: () {
                 final amount = double.tryParse(amountCtrl.text.trim()) ?? 0;
                 if (amount <= 0 || amount > supply.balance + 0.005) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Enter an amount within the outstanding balance.'))));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        uiT('Enter an amount within the outstanding balance.'),
+                      ),
+                    ),
+                  );
                   return;
                 }
                 Navigator.pop(ctx, true);
@@ -3068,7 +3433,14 @@ class _PayYanPageState extends State<PayYanPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(uiF('{supplier} • {product}', {'supplier': supply.supplier.isEmpty ? uiT('Supplier') : supply.supplier, 'product': supply.product})),
+        title: Text(
+          uiF('{supplier} • {product}', {
+            'supplier': supply.supplier.isEmpty
+                ? uiT('Supplier')
+                : supply.supplier,
+            'product': supply.product,
+          }),
+        ),
         content: SizedBox(
           width: 460,
           child: payments.isEmpty
@@ -3082,58 +3454,126 @@ class _PayYanPageState extends State<PayYanPage> {
                     final label = p.amount >= 0 ? 'Paid' : 'Adjustment';
                     return ListTile(
                       dense: true,
-                      leading: Icon(p.amount >= 0 ? Icons.arrow_upward : Icons.undo, color: p.amount >= 0 ? Colors.red : Colors.orange),
-                      title: Text(uiF('{label} {amount}', {'label': uiT(label), 'amount': p.amount.abs().toStringAsFixed(2)})),
-                      subtitle: Text('${_formatDateOnly(p.date)}${p.method.isNotEmpty ? ' • ${uiT(p.method)}' : ''}${p.note.isNotEmpty ? ' • ${uiLedgerNote(p.note)}' : ''}'),
+                      leading: Icon(
+                        p.amount >= 0 ? Icons.arrow_upward : Icons.undo,
+                        color: p.amount >= 0 ? Colors.red : Colors.orange,
+                      ),
+                      title: Text(
+                        uiF('{label} {amount}', {
+                          'label': uiT(label),
+                          'amount': p.amount.abs().toStringAsFixed(2),
+                        }),
+                      ),
+                      subtitle: Text(
+                        '${_formatDateOnly(p.date)}${p.method.isNotEmpty ? ' • ${uiT(p.method)}' : ''}${p.note.isNotEmpty ? ' • ${uiLedgerNote(p.note)}' : ''}',
+                      ),
                     );
                   },
                 ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(uiT('Close')))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(uiT('Close')),
+          ),
+        ],
       ),
     );
   }
 
-  @override Widget build(BuildContext context) {
-    final supplies = AppData.instance.incomingSupplies.where((s) => AppData.instance.paidForSupply(s.id) < s.total - .005).toList()..sort((a,b) => b.date.compareTo(a.date));
-    final total = supplies.fold(0.0, (sum,s) => sum + (s.total - AppData.instance.paidForSupply(s.id)).clamp(0, double.infinity).toDouble());
+  @override
+  Widget build(BuildContext context) {
+    final supplies =
+        AppData.instance.incomingSupplies
+            .where((s) => AppData.instance.paidForSupply(s.id) < s.total - .005)
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+    final total = supplies.fold(
+      0.0,
+      (sum, s) =>
+          sum +
+          (s.total - AppData.instance.paidForSupply(s.id))
+              .clamp(0, double.infinity)
+              .toDouble(),
+    );
     return Scaffold(
-      appBar: AppBar(title: Text(uiT(widget.title)), backgroundColor: PosDashboardScreen.primaryGreen, foregroundColor: Colors.white),
-      body: Column(children: [
-        _ledgerTotal(uiF('Total to Pay: {amount}', {'amount': total.toStringAsFixed(2)}), Colors.redAccent),
-        Expanded(
-          child: supplies.isEmpty
-              ? Center(child: Text(uiT('Nothing to pay. All supplier balances are settled.')))
-              : ListView.builder(
-                  itemCount: supplies.length,
-                  itemBuilder: (_, i) {
-                    final s = supplies[i];
-                    final paid = AppData.instance.paidForSupply(s.id);
-                    final balance = (s.total - paid).clamp(0, double.infinity).toDouble();
-                    return ListTile(
-                      leading: const Icon(Icons.arrow_upward, color: Colors.redAccent),
-                      title: Text(s.supplier.isEmpty ? uiT('Supplier') : s.supplier),
-                      subtitle: Text('${s.product} • ${_formatDateOnly(s.date)}\n${uiF('Paid {paid} / {total} • Balance {balance}', {'paid': paid.toStringAsFixed(2), 'total': s.total.toStringAsFixed(2), 'balance': balance.toStringAsFixed(2)})}'),
-                      isThreeLine: true,
-                      trailing: Wrap(spacing: 4, children: [
-                        IconButton(onPressed: () => _history(s), icon: const Icon(Icons.history), tooltip: uiT('Payment history')),
-                        FilledButton(onPressed: () => _pay(s), child: Text(uiT('Pay'))),
-                      ]),
-                    );
-                  },
-                ),
-        )
-      ]),
+      appBar: AppBar(
+        title: Text(uiT(widget.title)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
+      ),
+      body: Column(
+        children: [
+          _ledgerTotal(
+            uiF('Total to Pay: {amount}', {'amount': total.toStringAsFixed(2)}),
+            Colors.redAccent,
+          ),
+          Expanded(
+            child: supplies.isEmpty
+                ? Center(
+                    child: Text(
+                      uiT('Nothing to pay. All supplier balances are settled.'),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: supplies.length,
+                    itemBuilder: (_, i) {
+                      final s = supplies[i];
+                      final paid = AppData.instance.paidForSupply(s.id);
+                      final balance = (s.total - paid)
+                          .clamp(0, double.infinity)
+                          .toDouble();
+                      return ListTile(
+                        leading: const Icon(
+                          Icons.arrow_upward,
+                          color: Colors.redAccent,
+                        ),
+                        title: Text(
+                          s.supplier.isEmpty ? uiT('Supplier') : s.supplier,
+                        ),
+                        subtitle: Text(
+                          '${s.product} • ${_formatDateOnly(s.date)}\n${uiF('Paid {paid} / {total} • Balance {balance}', {'paid': paid.toStringAsFixed(2), 'total': s.total.toStringAsFixed(2), 'balance': balance.toStringAsFixed(2)})}',
+                        ),
+                        isThreeLine: true,
+                        trailing: Wrap(
+                          spacing: 4,
+                          children: [
+                            IconButton(
+                              onPressed: () => _history(s),
+                              icon: const Icon(Icons.history),
+                              tooltip: uiT('Payment history'),
+                            ),
+                            FilledButton(
+                              onPressed: () => _pay(s),
+                              child: Text(uiT('Pay')),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _ledgerTotal(String text, Color color) => Container(width: double.infinity, color: color.withValues(alpha: .12), padding: const EdgeInsets.all(16), child: Text(text, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)));
+  Widget _ledgerTotal(String text, Color color) => Container(
+    width: double.infinity,
+    color: color.withValues(alpha: .12),
+    padding: const EdgeInsets.all(16),
+    child: Text(
+      text,
+      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+    ),
+  );
 }
 
 class YaYanPage extends StatefulWidget {
   const YaYanPage({super.key, required this.title});
   final String title;
-  @override State<YaYanPage> createState() => _YaYanPageState();
+  @override
+  State<YaYanPage> createState() => _YaYanPageState();
 }
 
 class _YaYanPageState extends State<YaYanPage> {
@@ -3150,42 +3590,84 @@ class _YaYanPageState extends State<YaYanPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(uiF('Receive from {customer}', {'customer': sale.customer.isEmpty ? uiT('Customer') : sale.customer})),
+          title: Text(
+            uiF('Receive from {customer}', {
+              'customer': sale.customer.isEmpty
+                  ? uiT('Customer')
+                  : sale.customer,
+            }),
+          ),
           content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(uiF('Outstanding: {balance}', {'balance': balance.toStringAsFixed(2)}), style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              TextField(controller: amountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: uiT('Payment amount'))),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: method,
-                decoration: InputDecoration(labelText: uiT('Payment method')),
-                items: [
-                  DropdownMenuItem(value: 'Cash', child: Text(uiT('Cash'))),
-                  DropdownMenuItem(value: 'Bank', child: Text(uiT('Bank'))),
-                  DropdownMenuItem(value: 'Mobile', child: Text(uiT('Mobile'))),
-                  DropdownMenuItem(value: 'Credit', child: Text(uiT('Credit'))),
-                ],
-                onChanged: (v) => setDialogState(() => method = v ?? 'Cash'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await showDatePicker(context: ctx, initialDate: date, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                  if (picked != null) setDialogState(() => date = picked);
-                },
-                icon: const Icon(Icons.calendar_today),
-                label: Text(uiF('Payment date {date}', {'date': _formatDateOnly(date)})),
-              ),
-            ]),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  uiF('Outstanding: {balance}', {
+                    'balance': balance.toStringAsFixed(2),
+                  }),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(labelText: uiT('Payment amount')),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: method,
+                  decoration: InputDecoration(labelText: uiT('Payment method')),
+                  items: [
+                    DropdownMenuItem(value: 'Cash', child: Text(uiT('Cash'))),
+                    DropdownMenuItem(value: 'Bank', child: Text(uiT('Bank'))),
+                    DropdownMenuItem(
+                      value: 'Mobile',
+                      child: Text(uiT('Mobile')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Credit',
+                      child: Text(uiT('Credit')),
+                    ),
+                  ],
+                  onChanged: (v) => setDialogState(() => method = v ?? 'Cash'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: date,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) setDialogState(() => date = picked);
+                  },
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    uiF('Payment date {date}', {'date': _formatDateOnly(date)}),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(uiT('Cancel'))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(uiT('Cancel')),
+            ),
             ElevatedButton(
               onPressed: () {
                 final amount = double.tryParse(amountCtrl.text.trim()) ?? 0;
                 if (amount <= 0 || amount > balance + 0.005) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT('Enter an amount within the outstanding balance.'))));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        uiT('Enter an amount within the outstanding balance.'),
+                      ),
+                    ),
+                  );
                   return;
                 }
                 Navigator.pop(ctx, true);
@@ -3216,7 +3698,12 @@ class _YaYanPageState extends State<YaYanPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(uiF('{customer} • Voucher {voucher}', {'customer': sale.customer.isEmpty ? uiT('Customer') : sale.customer, 'voucher': sale.voucherNumber})),
+        title: Text(
+          uiF('{customer} • Voucher {voucher}', {
+            'customer': sale.customer.isEmpty ? uiT('Customer') : sale.customer,
+            'voucher': sale.voucherNumber,
+          }),
+        ),
         content: SizedBox(
           width: 460,
           child: payments.isEmpty
@@ -3229,14 +3716,31 @@ class _YaYanPageState extends State<YaYanPage> {
                     final p = payments[i];
                     return ListTile(
                       dense: true,
-                      leading: Icon(p.amount >= 0 ? Icons.arrow_downward : Icons.undo, color: p.amount >= 0 ? Colors.teal : Colors.orange),
-                      title: Text(uiF('{label} {amount}', {'label': p.amount >= 0 ? uiT('Received') : uiT('Adjustment'), 'amount': p.amount.abs().toStringAsFixed(2)})),
-                      subtitle: Text('${_formatDateOnly(p.date)}${p.method.isNotEmpty ? ' • ${uiT(p.method)}' : ''}${p.note.isNotEmpty ? ' • ${uiLedgerNote(p.note)}' : ''}'),
+                      leading: Icon(
+                        p.amount >= 0 ? Icons.arrow_downward : Icons.undo,
+                        color: p.amount >= 0 ? Colors.teal : Colors.orange,
+                      ),
+                      title: Text(
+                        uiF('{label} {amount}', {
+                          'label': p.amount >= 0
+                              ? uiT('Received')
+                              : uiT('Adjustment'),
+                          'amount': p.amount.abs().toStringAsFixed(2),
+                        }),
+                      ),
+                      subtitle: Text(
+                        '${_formatDateOnly(p.date)}${p.method.isNotEmpty ? ' • ${uiT(p.method)}' : ''}${p.note.isNotEmpty ? ' • ${uiLedgerNote(p.note)}' : ''}',
+                      ),
                     );
                   },
                 ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(uiT('Close')))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(uiT('Close')),
+          ),
+        ],
       ),
     );
   }
@@ -3244,14 +3748,25 @@ class _YaYanPageState extends State<YaYanPage> {
   @override
   Widget build(BuildContext context) {
     // Keep only vouchers that still have money outstanding, newest first.
-    final sales = AppData.instance.sales
-        .where((s) => AppData.instance.totalForSale(s.voucherNumber) - AppData.instance.paidForSale(s.voucherNumber) > .005)
-        .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    final sales =
+        AppData.instance.sales
+            .where(
+              (s) =>
+                  AppData.instance.totalForSale(s.voucherNumber) -
+                      AppData.instance.paidForSale(s.voucherNumber) >
+                  .005,
+            )
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
 
     final total = sales.fold<double>(
       0,
-      (sum, s) => sum + (AppData.instance.totalForSale(s.voucherNumber) - AppData.instance.paidForSale(s.voucherNumber)).clamp(0, double.infinity).toDouble(),
+      (sum, s) =>
+          sum +
+          (AppData.instance.totalForSale(s.voucherNumber) -
+                  AppData.instance.paidForSale(s.voucherNumber))
+              .clamp(0, double.infinity)
+              .toDouble(),
     );
 
     // Group by normalized customer/store name so repeated visits to the same
@@ -3259,7 +3774,9 @@ class _YaYanPageState extends State<YaYanPage> {
     final groupedSales = <String, List<Sale>>{};
     final groupNames = <String, String>{};
     for (final sale in sales) {
-      final name = sale.customer.trim().isEmpty ? uiT('Customer') : sale.customer.trim();
+      final name = sale.customer.trim().isEmpty
+          ? uiT('Customer')
+          : sale.customer.trim();
       final key = name.toLowerCase();
       groupedSales.putIfAbsent(key, () => <Sale>[]).add(sale);
       groupNames.putIfAbsent(key, () => name);
@@ -3268,19 +3785,23 @@ class _YaYanPageState extends State<YaYanPage> {
     final groupKeys = groupedSales.keys.toList();
     final normalizedQuery = _searchQuery.trim().toLowerCase();
     final visibleGroupKeys = groupKeys
-        .where((key) => groupNames[key]!.toLowerCase().contains(normalizedQuery))
+        .where(
+          (key) => groupNames[key]!.toLowerCase().contains(normalizedQuery),
+        )
         .toList();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: Column(
         children: [
           _ledgerTotal(
-            uiF('Total to Receive: {amount}', {'amount': total.toStringAsFixed(2)}),
+            uiF('Total to Receive: {amount}', {
+              'amount': total.toStringAsFixed(2),
+            }),
             Colors.teal,
           ),
           Padding(
@@ -3297,10 +3818,16 @@ class _YaYanPageState extends State<YaYanPage> {
           ),
           Expanded(
             child: sales.isEmpty
-                ? Center(child: Text(uiT('Nothing to receive. All customer balances are settled.')))
+                ? Center(
+                    child: Text(
+                      uiT(
+                        'Nothing to receive. All customer balances are settled.',
+                      ),
+                    ),
+                  )
                 : visibleGroupKeys.isEmpty
-                    ? Center(child: Text(uiT('No stores match your search.')))
-                    : ListView.builder(
+                ? Center(child: Text(uiT('No stores match your search.')))
+                : ListView.builder(
                     itemCount: visibleGroupKeys.length,
                     itemBuilder: (context, index) {
                       final key = visibleGroupKeys[index];
@@ -3308,65 +3835,104 @@ class _YaYanPageState extends State<YaYanPage> {
                       final storeName = groupNames[key]!;
                       final storeBalance = storeSales.fold<double>(
                         0,
-                        (sum, sale) => sum + (AppData.instance.totalForSale(sale.voucherNumber) - AppData.instance.paidForSale(sale.voucherNumber)).clamp(0, double.infinity).toDouble(),
+                        (sum, sale) =>
+                            sum +
+                            (AppData.instance.totalForSale(sale.voucherNumber) -
+                                    AppData.instance.paidForSale(
+                                      sale.voucherNumber,
+                                    ))
+                                .clamp(0, double.infinity)
+                                .toDouble(),
                       );
                       final voucherCountLabel = storeSales.length == 1
                           ? uiT('1 outstanding voucher')
-                          : uiF('{count} outstanding vouchers', {'count': storeSales.length.toString()});
-                      final storeBalanceLabel = uiF(
-                        'Balance {balance}',
-                        {'balance': storeBalance.toStringAsFixed(2)},
-                      );
+                          : uiF('{count} outstanding vouchers', {
+                              'count': storeSales.length.toString(),
+                            });
+                      final storeBalanceLabel = uiF('Balance {balance}', {
+                        'balance': storeBalance.toStringAsFixed(2),
+                      });
 
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         clipBehavior: Clip.antiAlias,
                         child: ExpansionTile(
                           key: PageStorageKey<String>('yayan-store-$key'),
                           leading: const CircleAvatar(
                             backgroundColor: Color(0x1A009688),
-                            child: Icon(Icons.storefront_outlined, color: Colors.teal),
+                            child: Icon(
+                              Icons.storefront_outlined,
+                              color: Colors.teal,
+                            ),
                           ),
-                          title: Text(storeName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text('$voucherCountLabel • $storeBalanceLabel'),
+                          title: Text(
+                            storeName,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            '$voucherCountLabel • $storeBalanceLabel',
+                          ),
                           children: [
                             const Divider(height: 1),
                             for (final sale in storeSales)
-                              Builder(builder: (context) {
-                                final voucherTotal = AppData.instance.totalForSale(sale.voucherNumber);
-                                final paid = AppData.instance.paidForSale(sale.voucherNumber);
-                                final balance = (voucherTotal - paid).clamp(0, double.infinity).toDouble();
-                                final paymentSummary = uiF(
-                                  'Paid {paid} / {total} • Balance {balance}',
-                                  {
-                                    'paid': paid.toStringAsFixed(2),
-                                    'total': voucherTotal.toStringAsFixed(2),
-                                    'balance': balance.toStringAsFixed(2),
-                                  },
-                                );
-                                return ListTile(
-                                  contentPadding: const EdgeInsets.only(left: 20, right: 12),
-                                  leading: const Icon(Icons.receipt_long_outlined, color: Colors.teal),
-                                  title: Text(uiF('Voucher {voucher}', {'voucher': sale.voucherNumber})),
-                                  subtitle: Text('${_formatDateOnly(sale.date)}\n$paymentSummary'),
-                                  isThreeLine: true,
-                                  trailing: Wrap(
-                                    spacing: 2,
-                                    crossAxisAlignment: WrapCrossAlignment.center,
-                                    children: [
-                                      IconButton(
-                                        onPressed: () => _history(sale),
-                                        icon: const Icon(Icons.history),
-                                        tooltip: uiT('Payment history'),
-                                      ),
-                                      FilledButton(
-                                        onPressed: () => _receive(sale),
-                                        child: Text(uiT('Receive')),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
+                              Builder(
+                                builder: (context) {
+                                  final voucherTotal = AppData.instance
+                                      .totalForSale(sale.voucherNumber);
+                                  final paid = AppData.instance.paidForSale(
+                                    sale.voucherNumber,
+                                  );
+                                  final balance = (voucherTotal - paid)
+                                      .clamp(0, double.infinity)
+                                      .toDouble();
+                                  final paymentSummary = uiF(
+                                    'Paid {paid} / {total} • Balance {balance}',
+                                    {
+                                      'paid': paid.toStringAsFixed(2),
+                                      'total': voucherTotal.toStringAsFixed(2),
+                                      'balance': balance.toStringAsFixed(2),
+                                    },
+                                  );
+                                  return ListTile(
+                                    contentPadding: const EdgeInsets.only(
+                                      left: 20,
+                                      right: 12,
+                                    ),
+                                    leading: const Icon(
+                                      Icons.receipt_long_outlined,
+                                      color: Colors.teal,
+                                    ),
+                                    title: Text(
+                                      uiF('Voucher {voucher}', {
+                                        'voucher': sale.voucherNumber,
+                                      }),
+                                    ),
+                                    subtitle: Text(
+                                      '${_formatDateOnly(sale.date)}\n$paymentSummary',
+                                    ),
+                                    isThreeLine: true,
+                                    trailing: Wrap(
+                                      spacing: 2,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        IconButton(
+                                          onPressed: () => _history(sale),
+                                          icon: const Icon(Icons.history),
+                                          tooltip: uiT('Payment history'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () => _receive(sale),
+                                          child: Text(uiT('Receive')),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                           ],
                         ),
                       );
@@ -3378,7 +3944,15 @@ class _YaYanPageState extends State<YaYanPage> {
     );
   }
 
-  Widget _ledgerTotal(String text, Color color) => Container(width: double.infinity, color: color.withValues(alpha: .12), padding: const EdgeInsets.all(16), child: Text(text, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)));
+  Widget _ledgerTotal(String text, Color color) => Container(
+    width: double.infinity,
+    color: color.withValues(alpha: .12),
+    padding: const EdgeInsets.all(16),
+    child: Text(
+      text,
+      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+    ),
+  );
 }
 
 class CapitalPage extends StatefulWidget {
@@ -3459,13 +4033,17 @@ class _CapitalPageState extends State<CapitalPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  uiT('This amount is saved once as the fixed opening balance and cannot be edited from the Capital page.'),
+                  uiT(
+                    'This amount is saved once as the fixed opening balance and cannot be edited from the Capital page.',
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: amountController,
                   autofocus: true,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     labelText: uiT('Starting Capital (MMK)'),
                     border: const OutlineInputBorder(),
@@ -3509,7 +4087,11 @@ class _CapitalPageState extends State<CapitalPage> {
                 final amount = double.tryParse(amountController.text.trim());
                 if (amount == null || !amount.isFinite || amount < 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(uiT('Enter a valid starting capital amount.'))),
+                    SnackBar(
+                      content: Text(
+                        uiT('Enter a valid starting capital amount.'),
+                      ),
+                    ),
                   );
                   return;
                 }
@@ -3539,13 +4121,18 @@ class _CapitalPageState extends State<CapitalPage> {
           if (mounted) {
             setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(uiT('Starting capital has been set and locked.'))),
+              SnackBar(
+                content: Text(uiT('Starting capital has been set and locked.')),
+              ),
             );
           }
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+              SnackBar(
+                content: Text(uiError(e)),
+                backgroundColor: Colors.redAccent,
+              ),
             );
           }
         }
@@ -3561,11 +4148,10 @@ class _CapitalPageState extends State<CapitalPage> {
     return AppData.instance.cashEntries.where((entry) {
       final date = _dayOnly(entry.date);
       return !date.isBefore(startDate) && !date.isAfter(today);
-    }).toList()
-      ..sort((a, b) {
-        final byDate = a.date.compareTo(b.date);
-        return byDate != 0 ? byDate : a.id.compareTo(b.id);
-      });
+    }).toList()..sort((a, b) {
+      final byDate = a.date.compareTo(b.date);
+      return byDate != 0 ? byDate : a.id.compareTo(b.id);
+    });
   }
 
   List<_CapitalDaySummary> _buildDaySummaries() {
@@ -3620,13 +4206,15 @@ class _CapitalPageState extends State<CapitalPage> {
         }
       }
       runningCapital = opening + added - extracted;
-      summaries.add(_CapitalDaySummary(
-        date: day,
-        openingCapital: opening,
-        added: added,
-        extracted: extracted,
-        closingCapital: runningCapital,
-      ));
+      summaries.add(
+        _CapitalDaySummary(
+          date: day,
+          openingCapital: opening,
+          added: added,
+          extracted: extracted,
+          closingCapital: runningCapital,
+        ),
+      );
     }
     return summaries.reversed.toList();
   }
@@ -3641,9 +4229,9 @@ class _CapitalPageState extends State<CapitalPage> {
   }
 
   double get _totalToReceive => AppData.instance.yaYanEntries.fold<double>(
-        0,
-        (sum, entry) => sum + entry.amount.abs(),
-      );
+    0,
+    (sum, entry) => sum + entry.amount.abs(),
+  );
 
   Widget _capitalCard({
     required String title,
@@ -3669,15 +4257,28 @@ class _CapitalPageState extends State<CapitalPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 5),
                   Text(
                     value,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 3),
-                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -3706,11 +4307,19 @@ class _CapitalPageState extends State<CapitalPage> {
             children: [
               Text(
                 uiF('Added: {amount}', {'amount': _money(summary.added)}),
-                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Text(
-                uiF('Extracted: {amount}', {'amount': _money(summary.extracted)}),
-                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                uiF('Extracted: {amount}', {
+                  'amount': _money(summary.extracted),
+                }),
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -3718,16 +4327,29 @@ class _CapitalPageState extends State<CapitalPage> {
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         children: [
           const Divider(height: 8),
-          _balanceRow(uiT('Starting capital for this day'), summary.openingCapital),
+          _balanceRow(
+            uiT('Starting capital for this day'),
+            summary.openingCapital,
+          ),
           const SizedBox(height: 8),
-          _balanceRow(uiT('Added today'), summary.added, valueColor: Colors.green),
+          _balanceRow(
+            uiT('Added today'),
+            summary.added,
+            valueColor: Colors.green,
+          ),
           const SizedBox(height: 8),
-          _balanceRow(uiT('Extracted today'), summary.extracted, valueColor: Colors.red),
+          _balanceRow(
+            uiT('Extracted today'),
+            summary.extracted,
+            valueColor: Colors.red,
+          ),
           const Divider(height: 20),
           _balanceRow(
             uiT('Left capital at day end'),
             summary.closingCapital,
-            valueColor: summary.closingCapital >= 0 ? PosDashboardScreen.primaryGreen : Colors.red,
+            valueColor: summary.closingCapital >= 0
+                ? PosDashboardScreen.primaryGreen
+                : Colors.red,
             bold: true,
           ),
         ],
@@ -3735,7 +4357,12 @@ class _CapitalPageState extends State<CapitalPage> {
     );
   }
 
-  Widget _balanceRow(String label, double amount, {Color? valueColor, bool bold = false}) {
+  Widget _balanceRow(
+    String label,
+    double amount, {
+    Color? valueColor,
+    bool bold = false,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3764,19 +4391,27 @@ class _CapitalPageState extends State<CapitalPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _capitalCard(
             title: uiT('Starting Capital (Fixed)'),
-            value: _isConfigured ? _money(_startingCapital) : uiT('Not set yet'),
-            icon: _isConfigured ? Icons.lock_outline : Icons.account_balance_wallet_outlined,
-            color: _isConfigured ? PosDashboardScreen.primaryGreen : Colors.orange,
+            value: _isConfigured
+                ? _money(_startingCapital)
+                : uiT('Not set yet'),
+            icon: _isConfigured
+                ? Icons.lock_outline
+                : Icons.account_balance_wallet_outlined,
+            color: _isConfigured
+                ? PosDashboardScreen.primaryGreen
+                : Colors.orange,
             subtitle: _isConfigured
-                ? uiF('Locked since {date}', {'date': _formatDateOnly(_capitalStartDate!)})
+                ? uiF('Locked since {date}', {
+                    'date': _formatDateOnly(_capitalStartDate!),
+                  })
                 : uiT('Set once to begin capital tracking.'),
             trailing: _isConfigured
                 ? const Icon(Icons.verified_user_outlined, color: Colors.green)
@@ -3797,7 +4432,9 @@ class _CapitalPageState extends State<CapitalPage> {
                     title: uiT('Today Updated Capital'),
                     value: _money(todayCapital),
                     icon: Icons.account_balance_outlined,
-                    color: todayCapital >= 0 ? PosDashboardScreen.primaryGreen : Colors.red,
+                    color: todayCapital >= 0
+                        ? PosDashboardScreen.primaryGreen
+                        : Colors.red,
                   ),
                 ),
                 SizedBox(
@@ -3816,7 +4453,9 @@ class _CapitalPageState extends State<CapitalPage> {
                     value: _money(todayCapital + toReceive),
                     icon: Icons.savings_outlined,
                     color: Colors.blue.shade800,
-                    subtitle: uiT('Updated capital + outstanding customer balances'),
+                    subtitle: uiT(
+                      'Updated capital + outstanding customer balances',
+                    ),
                   ),
                 ),
               ],
@@ -3828,14 +4467,19 @@ class _CapitalPageState extends State<CapitalPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              uiT('Expand a date to see that day’s opening capital and remaining capital after additions and extractions.'),
+              uiT(
+                'Expand a date to see that day’s opening capital and remaining capital after additions and extractions.',
+              ),
               style: const TextStyle(fontSize: 12, color: Colors.black54),
             ),
             const SizedBox(height: 10),
             if (summaries.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(20),
-                child: Text(uiT('No capital activity has been recorded yet.'), textAlign: TextAlign.center),
+                child: Text(
+                  uiT('No capital activity has been recorded yet.'),
+                  textAlign: TextAlign.center,
+                ),
               )
             else
               for (final summary in summaries) _dayReport(summary),
@@ -3845,7 +4489,9 @@ class _CapitalPageState extends State<CapitalPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  uiT('Set your starting capital to see today’s updated capital, outstanding receivables, total capital with receivables, and daily capital reports.'),
+                  uiT(
+                    'Set your starting capital to see today’s updated capital, outstanding receivables, total capital with receivables, and daily capital reports.',
+                  ),
                 ),
               ),
             ),
@@ -3872,10 +4518,7 @@ class SalesReportPage extends StatefulWidget {
 class _SalesReportPageState extends State<SalesReportPage> {
   String _period = 'Daily';
   DateTime _selectedDate = DateTime.now();
-  DateTime _selectedMonth = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-  );
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
   int _selectedYear = DateTime.now().year;
   bool _generatingPdf = false;
 
@@ -3995,19 +4638,20 @@ class _SalesReportPageState extends State<SalesReportPage> {
                       itemCount: 12,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 2.3,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
+                            crossAxisCount: 3,
+                            childAspectRatio: 2.3,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                          ),
                       itemBuilder: (_, index) {
                         final month = index + 1;
                         final selected = month == tempMonth;
                         return OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             backgroundColor: selected
-                                ? PosDashboardScreen.primaryGreen
-                                    .withValues(alpha: .12)
+                                ? PosDashboardScreen.primaryGreen.withValues(
+                                    alpha: .12,
+                                  )
                                 : null,
                           ),
                           onPressed: () {
@@ -4065,10 +4709,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
                 ),
                 items: [
                   for (int year = 2000; year <= 2100; year++)
-                    DropdownMenuItem<int>(
-                      value: year,
-                      child: Text('$year'),
-                    ),
+                    DropdownMenuItem<int>(value: year, child: Text('$year')),
                 ],
                 onChanged: (value) {
                   if (value == null) return;
@@ -4095,8 +4736,11 @@ class _SalesReportPageState extends State<SalesReportPage> {
       setState(() {
         _selectedYear = selected;
         _selectedMonth = DateTime(selected, _selectedMonth.month);
-        _selectedDate =
-            DateTime(selected, _selectedDate.month, _selectedDate.day);
+        _selectedDate = DateTime(
+          selected,
+          _selectedDate.month,
+          _selectedDate.day,
+        );
       });
     }
   }
@@ -4143,10 +4787,9 @@ class _SalesReportPageState extends State<SalesReportPage> {
   // ---- Data for the selected period ----
 
   List<Sale> _periodSales() {
-    final list = AppData.instance.sales
-        .where((s) => _matchesPeriod(s.date))
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final list =
+        AppData.instance.sales.where((s) => _matchesPeriod(s.date)).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
     return list;
   }
 
@@ -4170,15 +4813,13 @@ class _SalesReportPageState extends State<SalesReportPage> {
 
   double _manualExpenses() {
     return AppData.instance.incomeExpenseEntries
-        .where((entry) =>
-            entry.type == 'expense' && _matchesPeriod(entry.date))
+        .where((entry) => entry.type == 'expense' && _matchesPeriod(entry.date))
         .fold(0.0, (sum, entry) => sum + entry.amount);
   }
 
   double _manualIncome() {
     return AppData.instance.incomeExpenseEntries
-        .where((entry) =>
-            entry.type == 'income' && _matchesPeriod(entry.date))
+        .where((entry) => entry.type == 'income' && _matchesPeriod(entry.date))
         .fold(0.0, (sum, entry) => sum + entry.amount);
   }
 
@@ -4202,7 +4843,10 @@ class _SalesReportPageState extends State<SalesReportPage> {
                 SegmentedButton<String>(
                   segments: [
                     ButtonSegment(value: 'income', label: Text(uiT('Income'))),
-                    ButtonSegment(value: 'expense', label: Text(uiT('Expense'))),
+                    ButtonSegment(
+                      value: 'expense',
+                      label: Text(uiT('Expense')),
+                    ),
                   ],
                   selected: {type},
                   onSelectionChanged: (selection) =>
@@ -4219,7 +4863,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
                       lastDate: DateTime(2100),
                       helpText: uiT('Select entry date'),
                     );
-                    if (picked != null) setDialogState(() => entryDate = picked);
+                    if (picked != null)
+                      setDialogState(() => entryDate = picked);
                   },
                   child: InputDecorator(
                     decoration: InputDecoration(
@@ -4241,7 +4886,9 @@ class _SalesReportPageState extends State<SalesReportPage> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     labelText: uiT('Amount (MMK)'),
                     border: const OutlineInputBorder(),
@@ -4266,9 +4913,15 @@ class _SalesReportPageState extends State<SalesReportPage> {
             FilledButton(
               onPressed: () async {
                 final amount = double.tryParse(amountCtrl.text.trim()) ?? 0;
-                if (nameCtrl.text.trim().isEmpty || amount <= 0 || !amount.isFinite) {
+                if (nameCtrl.text.trim().isEmpty ||
+                    amount <= 0 ||
+                    !amount.isFinite) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(uiT('Enter a description and a valid amount.'))),
+                    SnackBar(
+                      content: Text(
+                        uiT('Enter a description and a valid amount.'),
+                      ),
+                    ),
                   );
                   return;
                 }
@@ -4287,7 +4940,10 @@ class _SalesReportPageState extends State<SalesReportPage> {
                 } catch (e) {
                   if (dialogContext.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+                      SnackBar(
+                        content: Text(uiError(e)),
+                        backgroundColor: Colors.redAccent,
+                      ),
                     );
                   }
                 }
@@ -4362,12 +5018,14 @@ class _SalesReportPageState extends State<SalesReportPage> {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: PosDashboardScreen.primaryGreen
-                              .withValues(alpha: .10),
+                          color: PosDashboardScreen.primaryGreen.withValues(
+                            alpha: .10,
+                          ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: PosDashboardScreen.primaryGreen
-                                .withValues(alpha: .35),
+                            color: PosDashboardScreen.primaryGreen.withValues(
+                              alpha: .35,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -4377,8 +5035,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
                               _period == 'Daily'
                                   ? Icons.calendar_today_outlined
                                   : _period == 'Monthly'
-                                      ? Icons.calendar_month_outlined
-                                      : Icons.event_repeat_outlined,
+                                  ? Icons.calendar_month_outlined
+                                  : Icons.event_repeat_outlined,
                               size: 18,
                               color: PosDashboardScreen.primaryGreen,
                             ),
@@ -4401,10 +5059,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   onPressed: () => _changePeriod(1),
                   icon: const Icon(Icons.chevron_right),
                 ),
-                TextButton(
-                  onPressed: _jumpToToday,
-                  child: Text(uiT('Today')),
-                ),
+                TextButton(onPressed: _jumpToToday, child: Text(uiT('Today'))),
               ],
             ),
           ],
@@ -4413,12 +5068,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
     );
   }
 
-  Widget _metricCard(
-    String title,
-    double amount,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _metricCard(String title, double amount, IconData icon, Color color) {
     return Expanded(
       child: Card(
         elevation: 1.5,
@@ -4556,8 +5206,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
         final sale = sales[index];
         final items = AppData.instance.itemsForSale(sale.voucherNumber);
         final amount = AppData.instance.totalForSale(sale.voucherNumber);
-        final profit =
-            items.fold(0.0, (sum, item) => sum + item.profit);
+        final profit = items.fold(0.0, (sum, item) => sum + item.profit);
         return ListTile(
           dense: true,
           leading: const Icon(Icons.receipt_long_outlined),
@@ -4565,19 +5214,27 @@ class _SalesReportPageState extends State<SalesReportPage> {
             sale.customerName.isEmpty ? uiT('Customer') : sale.customerName,
           ),
           subtitle: Text(
-            uiF('Voucher {voucher} • {date} • {count} item(s)', {'voucher': sale.voucherNumber, 'date': _formatDateOnly(sale.date), 'count': items.length.toString()}),
+            uiF('Voucher {voucher} • {date} • {count} item(s)', {
+              'voucher': sale.voucherNumber,
+              'date': _formatDateOnly(sale.date),
+              'count': items.length.toString(),
+            }),
           ),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(_money(amount),
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                _money(amount),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               Text(
                 uiF('Profit {amount}', {'amount': _money(profit)}),
                 style: TextStyle(
                   fontSize: 11,
-                  color: profit >= 0 ? PosDashboardScreen.primaryGreen : Colors.red,
+                  color: profit >= 0
+                      ? PosDashboardScreen.primaryGreen
+                      : Colors.red,
                 ),
               ),
             ],
@@ -4615,7 +5272,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
     }
   }
 
-  Future<({ShapedFont regular, ShapedFont bold})> _loadReportShapedFonts() async {
+  Future<({ShapedFont regular, ShapedFont bold})>
+  _loadReportShapedFonts() async {
     final fonts = await Future.wait<ShapedFont>([
       _loadMyanmarPdfShapedFont(bold: false),
       _loadMyanmarPdfShapedFont(bold: true),
@@ -4794,14 +5452,11 @@ class _SalesReportPageState extends State<SalesReportPage> {
   }
 
   double _reportOutstanding(List<Sale> sales) {
-    return sales.fold<double>(
-      0,
-      (sum, sale) {
-        final total = AppData.instance.totalForSale(sale.voucherNumber);
-        final paid = AppData.instance.paidForSale(sale.voucherNumber);
-        return sum + (total - paid).clamp(0, double.infinity).toDouble();
-      },
-    );
+    return sales.fold<double>(0, (sum, sale) {
+      final total = AppData.instance.totalForSale(sale.voucherNumber);
+      final paid = AppData.instance.paidForSale(sale.voucherNumber);
+      return sum + (total - paid).clamp(0, double.infinity).toDouble();
+    });
   }
 
   Map<String, double> _reportPaymentMethods(List<Sale> sales) {
@@ -4827,12 +5482,23 @@ class _SalesReportPageState extends State<SalesReportPage> {
     return result;
   }
 
-  List<MapEntry<String, ({double quantity, double sales, double cost, double profit})>>
-      _reportProducts(List<Sale> sales) {
-    final map = <String, ({double quantity, double sales, double cost, double profit})>{};
+  List<
+    MapEntry<
+      String,
+      ({double quantity, double sales, double cost, double profit})
+    >
+  >
+  _reportProducts(List<Sale> sales) {
+    final map =
+        <
+          String,
+          ({double quantity, double sales, double cost, double profit})
+        >{};
     for (final sale in sales) {
       for (final item in AppData.instance.itemsForSale(sale.voucherNumber)) {
-        final key = item.name.trim().isEmpty ? uiT('Unnamed Product') : item.name.trim();
+        final key = item.name.trim().isEmpty
+            ? uiT('Unnamed Product')
+            : item.name.trim();
         final existing = map[key];
         final itemSales = item.amount;
         final itemCost = item.amount - item.profit;
@@ -4849,9 +5515,12 @@ class _SalesReportPageState extends State<SalesReportPage> {
     return result;
   }
 
-  List<MapEntry<String, ({double sales, double paid, double balance, int count})>>
-      _reportCustomers(List<Sale> sales) {
-    final map = <String, ({double sales, double paid, double balance, int count})>{};
+  List<
+    MapEntry<String, ({double sales, double paid, double balance, int count})>
+  >
+  _reportCustomers(List<Sale> sales) {
+    final map =
+        <String, ({double sales, double paid, double balance, int count})>{};
     for (final sale in sales) {
       final key = sale.customerName.trim().isEmpty
           ? uiT('Customer')
@@ -4887,7 +5556,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
   String _compactMoney(double value) {
     final sign = value < 0 ? '-' : '';
     final abs = value.abs();
-    if (abs >= 1000000000) return '$sign${(abs / 1000000000).toStringAsFixed(1)}B';
+    if (abs >= 1000000000)
+      return '$sign${(abs / 1000000000).toStringAsFixed(1)}B';
     if (abs >= 1000000) return '$sign${(abs / 1000000).toStringAsFixed(1)}M';
     if (abs >= 1000) return '$sign${(abs / 1000).toStringAsFixed(1)}K';
     return '$sign${abs.toStringAsFixed(0)}';
@@ -4911,7 +5581,9 @@ class _SalesReportPageState extends State<SalesReportPage> {
       );
     }
 
-    final shown = values.length <= maxBars ? values : values.sublist(values.length - maxBars);
+    final shown = values.length <= maxBars
+        ? values
+        : values.sublist(values.length - maxBars);
     final maxValue = shown.fold<double>(0, (m, e) => e.value > m ? e.value : m);
     final safeMax = maxValue <= 0 ? 1 : maxValue;
 
@@ -5003,48 +5675,72 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   child: pw.Container(
                     child: pw.Column(
                       children: [
-                      pw.Container(
-                        height: 12,
-                        decoration: const pw.BoxDecoration(
-                          color: PdfColors.grey200,
-                          borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
-                        ),
-                        child: pw.Row(
-                          children: [
-                            if (!(signed && item.value < 0)) ...[
-                              pw.Expanded(
-                                flex: (1000 * (item.value.abs() / safeMax)).round().clamp(1, 999).toInt(),
-                                child: pw.Container(
-                                  height: 12,
-                                  decoration: pw.BoxDecoration(
-                                    color: barColor,
-                                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+                        pw.Container(
+                          height: 12,
+                          decoration: const pw.BoxDecoration(
+                            color: PdfColors.grey200,
+                            borderRadius: pw.BorderRadius.all(
+                              pw.Radius.circular(2),
+                            ),
+                          ),
+                          child: pw.Row(
+                            children: [
+                              if (!(signed && item.value < 0)) ...[
+                                pw.Expanded(
+                                  flex: (1000 * (item.value.abs() / safeMax))
+                                      .round()
+                                      .clamp(1, 999)
+                                      .toInt(),
+                                  child: pw.Container(
+                                    height: 12,
+                                    decoration: pw.BoxDecoration(
+                                      color: barColor,
+                                      borderRadius: const pw.BorderRadius.all(
+                                        pw.Radius.circular(2),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              pw.Expanded(
-                                flex: (1000 - (1000 * (item.value.abs() / safeMax)).round()).clamp(1, 999),
-                                child: pw.SizedBox(),
-                              ),
-                            ] else ...[
-                              pw.Expanded(
-                                flex: (1000 - (1000 * (item.value.abs() / safeMax)).round()).clamp(1, 999),
-                                child: pw.SizedBox(),
-                              ),
-                              pw.Expanded(
-                                flex: (1000 * (item.value.abs() / safeMax)).round().clamp(1, 999).toInt(),
-                                child: pw.Container(
-                                  height: 12,
-                                  decoration: const pw.BoxDecoration(
-                                    color: PdfColors.red700,
-                                    borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+                                pw.Expanded(
+                                  flex:
+                                      (1000 -
+                                              (1000 *
+                                                      (item.value.abs() /
+                                                          safeMax))
+                                                  .round())
+                                          .clamp(1, 999),
+                                  child: pw.SizedBox(),
+                                ),
+                              ] else ...[
+                                pw.Expanded(
+                                  flex:
+                                      (1000 -
+                                              (1000 *
+                                                      (item.value.abs() /
+                                                          safeMax))
+                                                  .round())
+                                          .clamp(1, 999),
+                                  child: pw.SizedBox(),
+                                ),
+                                pw.Expanded(
+                                  flex: (1000 * (item.value.abs() / safeMax))
+                                      .round()
+                                      .clamp(1, 999)
+                                      .toInt(),
+                                  child: pw.Container(
+                                    height: 12,
+                                    decoration: const pw.BoxDecoration(
+                                      color: PdfColors.red700,
+                                      borderRadius: pw.BorderRadius.all(
+                                        pw.Radius.circular(2),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
                       ],
                     ),
                   ),
@@ -5058,7 +5754,9 @@ class _SalesReportPageState extends State<SalesReportPage> {
                     boldFont: boldFont,
                     fontSize: 7,
                     alignment: pw.Alignment.centerRight,
-                    color: signed && item.value < 0 ? PdfColors.red800 : PdfColors.black,
+                    color: signed && item.value < 0
+                        ? PdfColors.red800
+                        : PdfColors.black,
                   ),
                 ),
               ],
@@ -5120,7 +5818,9 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   boldFont: boldFont,
                   fontSize: 10,
                   bold: true,
-                  color: metric.length > 2 ? _pdfMetricColor(metric[2]) : PdfColors.teal800,
+                  color: metric.length > 2
+                      ? _pdfMetricColor(metric[2])
+                      : PdfColors.teal800,
                 ),
               ],
             ),
@@ -5136,10 +5836,16 @@ class _SalesReportPageState extends State<SalesReportPage> {
         final monthSales = sales
             .where((sale) => sale.date.month == month)
             .toList();
-        map[_monthNames[month - 1].substring(0, 3)] = _totalSalesAmount(monthSales);
+        map[_monthNames[month - 1].substring(0, 3)] = _totalSalesAmount(
+          monthSales,
+        );
       }
     } else if (_period == 'Monthly') {
-      final days = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day;
+      final days = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month + 1,
+        0,
+      ).day;
       for (var day = 1; day <= days; day++) {
         final daySales = sales.where((sale) => sale.date.day == day).toList();
         map[day.toString()] = _totalSalesAmount(daySales);
@@ -5148,7 +5854,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
       final byHour = <int, double>{};
       for (final sale in sales) {
         final hour = sale.date.hour;
-        byHour[hour] = (byHour[hour] ?? 0) +
+        byHour[hour] =
+            (byHour[hour] ?? 0) +
             AppData.instance.totalForSale(sale.voucherNumber);
       }
       for (var hour = 0; hour < 24; hour++) {
@@ -5179,10 +5886,9 @@ class _SalesReportPageState extends State<SalesReportPage> {
 
   Future<void> _generateYearlySummaryPdf() async {
     final year = _selectedYear;
-    final sales = AppData.instance.sales
-        .where((sale) => sale.date.year == year)
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final sales =
+        AppData.instance.sales.where((sale) => sale.date.year == year).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
 
     double yearSales = 0;
     double yearCost = 0;
@@ -5193,14 +5899,18 @@ class _SalesReportPageState extends State<SalesReportPage> {
     final rows = <List<String>>[];
 
     for (var month = 1; month <= 12; month++) {
-      final monthSales = sales.where((sale) => sale.date.month == month).toList();
+      final monthSales = sales
+          .where((sale) => sale.date.month == month)
+          .toList();
       final salesTotal = _totalSalesAmount(monthSales);
       final costTotal = _totalLpgCost(monthSales);
       final expenseTotal = AppData.instance.incomeExpenseEntries
-          .where((entry) =>
-              entry.type == 'expense' &&
-              entry.date.year == year &&
-              entry.date.month == month)
+          .where(
+            (entry) =>
+                entry.type == 'expense' &&
+                entry.date.year == year &&
+                entry.date.month == month,
+          )
           .fold<double>(0, (sum, entry) => sum + entry.amount);
       final paidTotal = _reportPaid(monthSales);
       final balanceTotal = _reportOutstanding(monthSales);
@@ -5230,16 +5940,21 @@ class _SalesReportPageState extends State<SalesReportPage> {
     final customerRows = _reportCustomers(sales);
     final paymentRows = _reportPaymentMethods(sales).entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final expenseRows = AppData.instance.incomeExpenseEntries
-        .where((entry) => entry.type == 'expense' && entry.date.year == year)
-        .fold<Map<String, double>>({}, (map, entry) {
-          final key = entry.name.trim().isEmpty ? uiT('Other') : entry.name.trim();
-          map[key] = (map[key] ?? 0) + entry.amount;
-          return map;
-        })
-        .entries
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final expenseRows =
+        AppData.instance.incomeExpenseEntries
+            .where(
+              (entry) => entry.type == 'expense' && entry.date.year == year,
+            )
+            .fold<Map<String, double>>({}, (map, entry) {
+              final key = entry.name.trim().isEmpty
+                  ? uiT('Other')
+                  : entry.name.trim();
+              map[key] = (map[key] ?? 0) + entry.amount;
+              return map;
+            })
+            .entries
+            .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
     final fonts = await _loadReportShapedFonts();
     final regularFont = fonts.regular;
@@ -5250,77 +5965,111 @@ class _SalesReportPageState extends State<SalesReportPage> {
       final normalPdfBold = await _loadMyanmarPdfBoldAsPdfFont();
 
       pw.Widget header() => pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _pdfReportText(
-                uiT('Kyal Sin Lay Energy & Tech'),
-                regularFont: regularFont,
-                boldFont: boldFont,
-                fontSize: 18,
-                bold: true,
-                color: PdfColors.teal800,
-              ),
-              pw.SizedBox(height: 2),
-              _pdfReportText(
-                uiF('Yearly Sales Report - {year}', {'year': year.toString()}),
-                regularFont: regularFont,
-                boldFont: boldFont,
-                fontSize: 12,
-                bold: true,
-              ),
-              _pdfReportText(
-                uiF('Generated: {date}', {'date': _formatDateOnly(DateTime.now())}),
-                regularFont: regularFont,
-                boldFont: boldFont,
-                fontSize: 8,
-                color: PdfColors.grey600,
-              ),
-              pw.SizedBox(height: 8),
-              pw.Divider(color: PdfColors.grey400),
-            ],
-          );
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _pdfReportText(
+            uiT('Kyal Sin Lay Energy & Tech'),
+            regularFont: regularFont,
+            boldFont: boldFont,
+            fontSize: 18,
+            bold: true,
+            color: PdfColors.teal800,
+          ),
+          pw.SizedBox(height: 2),
+          _pdfReportText(
+            uiF('Yearly Sales Report - {year}', {'year': year.toString()}),
+            regularFont: regularFont,
+            boldFont: boldFont,
+            fontSize: 12,
+            bold: true,
+          ),
+          _pdfReportText(
+            uiF('Generated: {date}', {'date': _formatDateOnly(DateTime.now())}),
+            regularFont: regularFont,
+            boldFont: boldFont,
+            fontSize: 8,
+            color: PdfColors.grey600,
+          ),
+          pw.SizedBox(height: 8),
+          pw.Divider(color: PdfColors.grey400),
+        ],
+      );
 
       pw.Widget footer(pw.Context context) => pw.Align(
-            alignment: pw.Alignment.centerRight,
-            child: _pdfReportText(
-              uiF('Page {page}', {'page': context.pageNumber.toString()}),
-              regularFont: regularFont,
-              boldFont: boldFont,
-              fontSize: 8,
-              color: PdfColors.grey600,
-              alignment: pw.Alignment.centerRight,
-            ),
-          );
+        alignment: pw.Alignment.centerRight,
+        child: _pdfReportText(
+          uiF('Page {page}', {'page': context.pageNumber.toString()}),
+          regularFont: regularFont,
+          boldFont: boldFont,
+          fontSize: 8,
+          color: PdfColors.grey600,
+          alignment: pw.Alignment.centerRight,
+        ),
+      );
 
       doc.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.fromLTRB(28, 32, 28, 28),
-          theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+          theme: pw.ThemeData.withFont(
+            base: normalPdfRegular,
+            bold: normalPdfBold,
+          ),
           header: (_) => header(),
           footer: footer,
           build: (_) => [
-            _pdfMetricGrid([
-              [uiT('Total Sales'), _money(yearSales), 'teal'],
-              [uiT('Total Paid'), _money(yearPaid), 'blue'],
-              [uiT('Outstanding'), _money(yearOutstanding), 'red'],
-              [uiT('COGS'), _money(yearCost), 'slate'],
-              [uiT('Gross Profit'), _money(yearGrossProfit), 'green'],
-              [uiT('Expenses'), _money(yearExpenses), 'orange'],
-              [uiT('Net Profit'), _money(yearNet), yearNet >= 0 ? 'green' : 'red'],
-              [uiT('Transactions'), yearTransactions.toString(), '0xFF455A64'],
-            ], regularFont: regularFont, boldFont: boldFont),
+            _pdfMetricGrid(
+              [
+                [uiT('Total Sales'), _money(yearSales), 'teal'],
+                [uiT('Total Paid'), _money(yearPaid), 'blue'],
+                [uiT('Outstanding'), _money(yearOutstanding), 'red'],
+                [uiT('COGS'), _money(yearCost), 'slate'],
+                [uiT('Gross Profit'), _money(yearGrossProfit), 'green'],
+                [uiT('Expenses'), _money(yearExpenses), 'orange'],
+                [
+                  uiT('Net Profit'),
+                  _money(yearNet),
+                  yearNet >= 0 ? 'green' : 'red',
+                ],
+                [
+                  uiT('Transactions'),
+                  yearTransactions.toString(),
+                  '0xFF455A64',
+                ],
+              ],
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
             pw.SizedBox(height: 15),
-            _pdfSectionTitle('Monthly Sales Trend', regularFont: regularFont, boldFont: boldFont),
+            _pdfSectionTitle(
+              'Monthly Sales Trend',
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
             _pdfVerticalBarChart(
-              rows.asMap().entries.map((e) => MapEntry(_monthNames[e.key].substring(0, 3),
-                  double.tryParse(rows[e.key][2].replaceAll(RegExp(r'[^0-9.-]'), '')) ?? 0)).toList(),
+              rows
+                  .asMap()
+                  .entries
+                  .map(
+                    (e) => MapEntry(
+                      _monthNames[e.key].substring(0, 3),
+                      double.tryParse(
+                            rows[e.key][2].replaceAll(RegExp(r'[^0-9.-]'), ''),
+                          ) ??
+                          0,
+                    ),
+                  )
+                  .toList(),
               regularFont: regularFont,
               boldFont: boldFont,
               maxBars: 12,
             ),
             pw.SizedBox(height: 10),
-            _pdfSectionTitle('Monthly Financial Breakdown', regularFont: regularFont, boldFont: boldFont),
+            _pdfSectionTitle(
+              'Monthly Financial Breakdown',
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
             _pdfHorizontalBarChart(
               [
                 MapEntry(uiT('Sales'), yearSales),
@@ -5335,7 +6084,11 @@ class _SalesReportPageState extends State<SalesReportPage> {
               signed: true,
             ),
             pw.SizedBox(height: 10),
-            _pdfSectionTitle('Sales by Month', regularFont: regularFont, boldFont: boldFont),
+            _pdfSectionTitle(
+              'Sales by Month',
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey400, width: .4),
               columnWidths: const {
@@ -5350,7 +6103,16 @@ class _SalesReportPageState extends State<SalesReportPage> {
               },
               children: [
                 _pdfReportHeaderRow(
-                  ['Month', 'Sales', 'Sales Amount', 'COGS', 'Expenses', 'Paid', 'Balance', 'Net'],
+                  [
+                    'Month',
+                    'Sales',
+                    'Sales Amount',
+                    'COGS',
+                    'Expenses',
+                    'Paid',
+                    'Balance',
+                    'Net',
+                  ],
                   regularFont: regularFont,
                   boldFont: boldFont,
                 ),
@@ -5386,21 +6148,34 @@ class _SalesReportPageState extends State<SalesReportPage> {
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4.landscape,
           margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
-          theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+          theme: pw.ThemeData.withFont(
+            base: normalPdfRegular,
+            bold: normalPdfBold,
+          ),
           header: (_) => header(),
           footer: footer,
           build: (_) => [
-            _pdfSectionTitle('Top Products by Revenue', regularFont: regularFont, boldFont: boldFont),
+            _pdfSectionTitle(
+              'Top Products by Revenue',
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
             _pdfHorizontalBarChart(
               productRows.map((e) => MapEntry(e.key, e.value.sales)).toList(),
               regularFont: regularFont,
               boldFont: boldFont,
             ),
             pw.SizedBox(height: 10),
-            _pdfSectionTitle('Top Products by Profit', regularFont: regularFont, boldFont: boldFont),
+            _pdfSectionTitle(
+              'Top Products by Profit',
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
             _pdfHorizontalBarChart(
-              ([...productRows]..sort((a, b) => b.value.profit.compareTo(a.value.profit)))
-                  .map((e) => MapEntry(e.key, e.value.profit)).toList(),
+              ([...productRows]
+                    ..sort((a, b) => b.value.profit.compareTo(a.value.profit)))
+                  .map((e) => MapEntry(e.key, e.value.profit))
+                  .toList(),
               regularFont: regularFont,
               boldFont: boldFont,
             ),
@@ -5412,8 +6187,17 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _pdfSectionTitle('Payment Methods', regularFont: regularFont, boldFont: boldFont),
-                      _pdfHorizontalBarChart(paymentRows, regularFont: regularFont, boldFont: boldFont, maxBars: 5),
+                      _pdfSectionTitle(
+                        'Payment Methods',
+                        regularFont: regularFont,
+                        boldFont: boldFont,
+                      ),
+                      _pdfHorizontalBarChart(
+                        paymentRows,
+                        regularFont: regularFont,
+                        boldFont: boldFont,
+                        maxBars: 5,
+                      ),
                     ],
                   ),
                 ),
@@ -5422,15 +6206,29 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _pdfSectionTitle('Expense Breakdown', regularFont: regularFont, boldFont: boldFont),
-                      _pdfHorizontalBarChart(expenseRows, regularFont: regularFont, boldFont: boldFont, maxBars: 6, barColor: PdfColors.orange700),
+                      _pdfSectionTitle(
+                        'Expense Breakdown',
+                        regularFont: regularFont,
+                        boldFont: boldFont,
+                      ),
+                      _pdfHorizontalBarChart(
+                        expenseRows,
+                        regularFont: regularFont,
+                        boldFont: boldFont,
+                        maxBars: 6,
+                        barColor: PdfColors.orange700,
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
             pw.SizedBox(height: 12),
-            _pdfSectionTitle('Customers by Sales', regularFont: regularFont, boldFont: boldFont),
+            _pdfSectionTitle(
+              'Customers by Sales',
+              regularFont: regularFont,
+              boldFont: boldFont,
+            ),
             _pdfHorizontalBarChart(
               customerRows.map((e) => MapEntry(e.key, e.value.sales)).toList(),
               regularFont: regularFont,
@@ -5445,15 +6243,25 @@ class _SalesReportPageState extends State<SalesReportPage> {
           pw.MultiPage(
             pageFormat: PdfPageFormat.a4.landscape,
             margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
-            theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+            theme: pw.ThemeData.withFont(
+              base: normalPdfRegular,
+              bold: normalPdfBold,
+            ),
             header: (_) => header(),
             footer: footer,
             build: (_) => [
-              _pdfSectionTitle('Outstanding Receivables', regularFont: regularFont, boldFont: boldFont),
+              _pdfSectionTitle(
+                'Outstanding Receivables',
+                regularFont: regularFont,
+                boldFont: boldFont,
+              ),
               _pdfHorizontalBarChart(
-                ([...customerRows]..sort((a, b) => b.value.balance.compareTo(a.value.balance)))
+                ([...customerRows]..sort(
+                      (a, b) => b.value.balance.compareTo(a.value.balance),
+                    ))
                     .where((e) => e.value.balance > 0.005)
-                    .map((e) => MapEntry(e.key, e.value.balance)).toList(),
+                    .map((e) => MapEntry(e.key, e.value.balance))
+                    .toList(),
                 regularFont: regularFont,
                 boldFont: boldFont,
                 maxBars: 12,
@@ -5506,7 +6314,9 @@ class _SalesReportPageState extends State<SalesReportPage> {
 
       if (uri != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiT('Yearly report saved to ') + uri.toString())),
+          SnackBar(
+            content: Text(uiT('Yearly report saved to ') + uri.toString()),
+          ),
         );
       }
     } finally {
@@ -5564,121 +6374,155 @@ class _SalesReportPageState extends State<SalesReportPage> {
       ].map(uiT).toList();
 
       pw.Widget reportHeader() => pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _pdfReportText(
-                uiT('Kyal Sin Lay Energy & Tech'),
-                regularFont: reportRegularFont,
-                boldFont: reportBoldFont,
-                fontSize: 18,
-                bold: true,
-                color: PdfColors.teal800,
-              ),
-              pw.SizedBox(height: 2),
-              _pdfReportText(
-                uiF('Sales Report - {period}', {'period': _periodLabel()}),
-                regularFont: reportRegularFont,
-                boldFont: reportBoldFont,
-                fontSize: 12,
-                bold: true,
-              ),
-              _pdfReportText(
-                uiF('Generated: {date}', {'date': _formatDateOnly(DateTime.now())}),
-                regularFont: reportRegularFont,
-                boldFont: reportBoldFont,
-                fontSize: 8,
-                color: PdfColors.grey600,
-              ),
-              pw.SizedBox(height: 8),
-              pw.Divider(color: PdfColors.grey400),
-            ],
-          );
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _pdfReportText(
+            uiT('Kyal Sin Lay Energy & Tech'),
+            regularFont: reportRegularFont,
+            boldFont: reportBoldFont,
+            fontSize: 18,
+            bold: true,
+            color: PdfColors.teal800,
+          ),
+          pw.SizedBox(height: 2),
+          _pdfReportText(
+            uiF('Sales Report - {period}', {'period': _periodLabel()}),
+            regularFont: reportRegularFont,
+            boldFont: reportBoldFont,
+            fontSize: 12,
+            bold: true,
+          ),
+          _pdfReportText(
+            uiF('Generated: {date}', {'date': _formatDateOnly(DateTime.now())}),
+            regularFont: reportRegularFont,
+            boldFont: reportBoldFont,
+            fontSize: 8,
+            color: PdfColors.grey600,
+          ),
+          pw.SizedBox(height: 8),
+          pw.Divider(color: PdfColors.grey400),
+        ],
+      );
 
       pw.Widget reportFooter(pw.Context context) => pw.Align(
-            alignment: pw.Alignment.centerRight,
-            child: _pdfReportText(
-              uiF('Page {page}', {'page': context.pageNumber.toString()}),
-              regularFont: reportRegularFont,
-              boldFont: reportBoldFont,
-              fontSize: 8,
-              color: PdfColors.grey600,
-              alignment: pw.Alignment.centerRight,
-            ),
-          );
+        alignment: pw.Alignment.centerRight,
+        child: _pdfReportText(
+          uiF('Page {page}', {'page': context.pageNumber.toString()}),
+          regularFont: reportRegularFont,
+          boldFont: reportBoldFont,
+          fontSize: 8,
+          color: PdfColors.grey600,
+          alignment: pw.Alignment.centerRight,
+        ),
+      );
 
       pw.Widget summaryPage() => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _pdfMetricGrid(
+            [
+              [uiT('Total Sales'), _money(totalSales), 'teal'],
+              [uiT('Total Paid'), _money(totalPaid), 'blue'],
+              [uiT('Outstanding'), _money(outstanding), 'red'],
+              [uiT('COGS'), _money(totalCost), 'slate'],
+              [uiT('Gross Profit'), _money(grossProfit), 'green'],
+              [uiT('Gross Margin'), '${margin.toStringAsFixed(1)}%', 'green'],
+              [uiT('Expenses'), _money(expenses), 'orange'],
+              [
+                uiT('Net Profit'),
+                _money(netProfit),
+                netProfit >= 0 ? 'green' : 'red',
+              ],
+            ],
+            regularFont: reportRegularFont,
+            boldFont: reportBoldFont,
+          ),
+          pw.SizedBox(height: 15),
+          _pdfSectionTitle(
+            _period == 'Monthly' ? 'Daily Sales Trend' : 'Sales by Hour',
+            regularFont: reportRegularFont,
+            boldFont: reportBoldFont,
+          ),
+          _pdfVerticalBarChart(
+            trend,
+            regularFont: reportRegularFont,
+            boldFont: reportBoldFont,
+            maxBars: 31,
+          ),
+          pw.SizedBox(height: 10),
+          _pdfSectionTitle(
+            'Financial Overview',
+            regularFont: reportRegularFont,
+            boldFont: reportBoldFont,
+          ),
+          _pdfHorizontalBarChart(
+            [
+              MapEntry(uiT('Sales'), totalSales),
+              MapEntry(uiT('COGS'), totalCost),
+              MapEntry(uiT('Gross Profit'), grossProfit),
+              MapEntry(uiT('Expenses'), expenses),
+              MapEntry(uiT('Net Profit'), netProfit),
+            ],
+            regularFont: reportRegularFont,
+            boldFont: reportBoldFont,
+            maxBars: 5,
+            signed: true,
+          ),
+          pw.SizedBox(height: 10),
+          pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _pdfMetricGrid([
-                [uiT('Total Sales'), _money(totalSales), 'teal'],
-                [uiT('Total Paid'), _money(totalPaid), 'blue'],
-                [uiT('Outstanding'), _money(outstanding), 'red'],
-                [uiT('COGS'), _money(totalCost), 'slate'],
-                [uiT('Gross Profit'), _money(grossProfit), 'green'],
-                [uiT('Gross Margin'), '${margin.toStringAsFixed(1)}%', 'green'],
-                [uiT('Expenses'), _money(expenses), 'orange'],
-                [uiT('Net Profit'), _money(netProfit), netProfit >= 0 ? 'green' : 'red'],
-              ], regularFont: reportRegularFont, boldFont: reportBoldFont),
-              pw.SizedBox(height: 15),
-              _pdfSectionTitle(
-                _period == 'Monthly' ? 'Daily Sales Trend' : 'Sales by Hour',
-                regularFont: reportRegularFont,
-                boldFont: reportBoldFont,
-              ),
-              _pdfVerticalBarChart(
-                trend,
-                regularFont: reportRegularFont,
-                boldFont: reportBoldFont,
-                maxBars: 31,
-              ),
-              pw.SizedBox(height: 10),
-              _pdfSectionTitle('Financial Overview', regularFont: reportRegularFont, boldFont: reportBoldFont),
-              _pdfHorizontalBarChart(
-                [
-                  MapEntry(uiT('Sales'), totalSales),
-                  MapEntry(uiT('COGS'), totalCost),
-                  MapEntry(uiT('Gross Profit'), grossProfit),
-                  MapEntry(uiT('Expenses'), expenses),
-                  MapEntry(uiT('Net Profit'), netProfit),
-                ],
-                regularFont: reportRegularFont,
-                boldFont: reportBoldFont,
-                maxBars: 5,
-                signed: true,
-              ),
-              pw.SizedBox(height: 10),
-              pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Expanded(
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        _pdfSectionTitle('Payment Methods', regularFont: reportRegularFont, boldFont: reportBoldFont),
-                        _pdfHorizontalBarChart(paymentMethods, regularFont: reportRegularFont, boldFont: reportBoldFont, maxBars: 5),
-                      ],
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    _pdfSectionTitle(
+                      'Payment Methods',
+                      regularFont: reportRegularFont,
+                      boldFont: reportBoldFont,
                     ),
-                  ),
-                  pw.SizedBox(width: 22),
-                  pw.Expanded(
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        _pdfSectionTitle('Expenses', regularFont: reportRegularFont, boldFont: reportBoldFont),
-                        _pdfHorizontalBarChart(expenseBreakdown, regularFont: reportRegularFont, boldFont: reportBoldFont, maxBars: 5, barColor: PdfColors.orange700),
-                      ],
+                    _pdfHorizontalBarChart(
+                      paymentMethods,
+                      regularFont: reportRegularFont,
+                      boldFont: reportBoldFont,
+                      maxBars: 5,
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              pw.SizedBox(width: 22),
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    _pdfSectionTitle(
+                      'Expenses',
+                      regularFont: reportRegularFont,
+                      boldFont: reportBoldFont,
+                    ),
+                    _pdfHorizontalBarChart(
+                      expenseBreakdown,
+                      regularFont: reportRegularFont,
+                      boldFont: reportBoldFont,
+                      maxBars: 5,
+                      barColor: PdfColors.orange700,
+                    ),
+                  ],
+                ),
               ),
             ],
-          );
+          ),
+        ],
+      );
 
       doc.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4.landscape,
           margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
-          theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+          theme: pw.ThemeData.withFont(
+            base: normalPdfRegular,
+            bold: normalPdfBold,
+          ),
           header: (_) => reportHeader(),
           footer: reportFooter,
           build: (_) => [summaryPage()],
@@ -5689,21 +6533,34 @@ class _SalesReportPageState extends State<SalesReportPage> {
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4.landscape,
           margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
-          theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+          theme: pw.ThemeData.withFont(
+            base: normalPdfRegular,
+            bold: normalPdfBold,
+          ),
           header: (_) => reportHeader(),
           footer: reportFooter,
           build: (_) => [
-            _pdfSectionTitle('Top Products by Revenue', regularFont: reportRegularFont, boldFont: reportBoldFont),
+            _pdfSectionTitle(
+              'Top Products by Revenue',
+              regularFont: reportRegularFont,
+              boldFont: reportBoldFont,
+            ),
             _pdfHorizontalBarChart(
               products.map((e) => MapEntry(e.key, e.value.sales)).toList(),
               regularFont: reportRegularFont,
               boldFont: reportBoldFont,
             ),
             pw.SizedBox(height: 12),
-            _pdfSectionTitle('Top Products by Profit', regularFont: reportRegularFont, boldFont: reportBoldFont),
+            _pdfSectionTitle(
+              'Top Products by Profit',
+              regularFont: reportRegularFont,
+              boldFont: reportBoldFont,
+            ),
             _pdfHorizontalBarChart(
-              ([...products]..sort((a, b) => b.value.profit.compareTo(a.value.profit)))
-                  .map((e) => MapEntry(e.key, e.value.profit)).toList(),
+              ([...products]
+                    ..sort((a, b) => b.value.profit.compareTo(a.value.profit)))
+                  .map((e) => MapEntry(e.key, e.value.profit))
+                  .toList(),
               regularFont: reportRegularFont,
               boldFont: reportBoldFont,
             ),
@@ -5715,9 +6572,15 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _pdfSectionTitle('Top Customers', regularFont: reportRegularFont, boldFont: reportBoldFont),
+                      _pdfSectionTitle(
+                        'Top Customers',
+                        regularFont: reportRegularFont,
+                        boldFont: reportBoldFont,
+                      ),
                       _pdfHorizontalBarChart(
-                        customers.map((e) => MapEntry(e.key, e.value.sales)).toList(),
+                        customers
+                            .map((e) => MapEntry(e.key, e.value.sales))
+                            .toList(),
                         regularFont: reportRegularFont,
                         boldFont: reportBoldFont,
                         maxBars: 6,
@@ -5730,11 +6593,19 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _pdfSectionTitle('Outstanding Receivables', regularFont: reportRegularFont, boldFont: reportBoldFont),
+                      _pdfSectionTitle(
+                        'Outstanding Receivables',
+                        regularFont: reportRegularFont,
+                        boldFont: reportBoldFont,
+                      ),
                       _pdfHorizontalBarChart(
-                        ([...customers]..sort((a, b) => b.value.balance.compareTo(a.value.balance)))
+                        ([...customers]..sort(
+                              (a, b) =>
+                                  b.value.balance.compareTo(a.value.balance),
+                            ))
                             .where((e) => e.value.balance > 0.005)
-                            .map((e) => MapEntry(e.key, e.value.balance)).toList(),
+                            .map((e) => MapEntry(e.key, e.value.balance))
+                            .toList(),
                         regularFont: reportRegularFont,
                         boldFont: reportBoldFont,
                         maxBars: 6,
@@ -5755,11 +6626,18 @@ class _SalesReportPageState extends State<SalesReportPage> {
           pw.MultiPage(
             pageFormat: PdfPageFormat.a4.landscape,
             margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
-            theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+            theme: pw.ThemeData.withFont(
+              base: normalPdfRegular,
+              bold: normalPdfBold,
+            ),
             header: (_) => reportHeader(),
             footer: reportFooter,
             build: (_) => [
-              _pdfSectionTitle('Sales Detail', regularFont: reportRegularFont, boldFont: reportBoldFont),
+              _pdfSectionTitle(
+                'Sales Detail',
+                regularFont: reportRegularFont,
+                boldFont: reportBoldFont,
+              ),
               _pdfReportText(
                 uiT('No sales recorded for this period.'),
                 regularFont: reportRegularFont,
@@ -5783,14 +6661,20 @@ class _SalesReportPageState extends State<SalesReportPage> {
 
           for (final sale in pageSales) {
             final items = AppData.instance.itemsForSale(sale.voucherNumber);
-            final itemsSummary = items.map((i) {
-              final unit = i.saleUnit.trim().isEmpty ? '' : ' ${i.saleUnit}';
-              return '${i.name} x${i.qty}$unit';
-            }).join(', ');
+            final itemsSummary = items
+                .map((i) {
+                  final unit = i.saleUnit.trim().isEmpty
+                      ? ''
+                      : ' ${i.saleUnit}';
+                  return '${i.name} x${i.qty}$unit';
+                })
+                .join(', ');
             final amount = AppData.instance.totalForSale(sale.voucherNumber);
             final profit = items.fold(0.0, (sum, i) => sum + i.profit);
             final paid = AppData.instance.paidForSale(sale.voucherNumber);
-            final balance = (amount - paid).clamp(0, double.infinity).toDouble();
+            final balance = (amount - paid)
+                .clamp(0, double.infinity)
+                .toDouble();
             final status = balance <= 0.005
                 ? 'PAID'
                 : (paid > 0 ? 'PARTIALLY PAID' : 'UNPAID');
@@ -5811,7 +6695,10 @@ class _SalesReportPageState extends State<SalesReportPage> {
             pw.MultiPage(
               pageFormat: PdfPageFormat.a4.landscape,
               margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
-              theme: pw.ThemeData.withFont(base: normalPdfRegular, bold: normalPdfBold),
+              theme: pw.ThemeData.withFont(
+                base: normalPdfRegular,
+                bold: normalPdfBold,
+              ),
               header: (_) => reportHeader(),
               footer: reportFooter,
               build: (_) => [
@@ -5842,9 +6729,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
       debugPrint('PDF generation failed: $e');
       debugPrintStack(stackTrace: stackTrace);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(uiError(e))));
       }
     } finally {
       regularFont?.dispose();
@@ -5864,9 +6750,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
   }
 
   Future<pw.Font> _loadMyanmarPdfBoldAsPdfFont() async {
-    final data = await rootBundle.load(
-      'assets/fonts/NotoSansMyanmar-Bold.ttf',
-    );
+    final data = await rootBundle.load('assets/fonts/NotoSansMyanmar-Bold.ttf');
     return pw.Font.ttf(data);
   }
 
@@ -5883,8 +6767,8 @@ class _SalesReportPageState extends State<SalesReportPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
         actions: [
           IconButton(
             tooltip: uiT('Generate PDF report'),
@@ -5948,14 +6832,30 @@ class _SalesReportPageState extends State<SalesReportPage> {
                     builder: (context, constraints) {
                       final narrow = constraints.maxWidth < 420;
                       final cards = [
-                        _metricCard('LPG Cost', totalCost,
-                            Icons.local_gas_station_outlined, Colors.deepOrange),
-                        _metricCard('Sales', totalSales,
-                            Icons.point_of_sale_outlined, PosDashboardScreen.primaryGreen),
-                        _metricCard('Other Income', otherIncome,
-                            Icons.add_circle_outline, Colors.green),
-                        _metricCard('Expenses', expenses,
-                            Icons.trending_down, Colors.red),
+                        _metricCard(
+                          'LPG Cost',
+                          totalCost,
+                          Icons.local_gas_station_outlined,
+                          Colors.deepOrange,
+                        ),
+                        _metricCard(
+                          'Sales',
+                          totalSales,
+                          Icons.point_of_sale_outlined,
+                          PosDashboardScreen.primaryGreen,
+                        ),
+                        _metricCard(
+                          'Other Income',
+                          otherIncome,
+                          Icons.add_circle_outline,
+                          Colors.green,
+                        ),
+                        _metricCard(
+                          'Expenses',
+                          expenses,
+                          Icons.trending_down,
+                          Colors.red,
+                        ),
                       ];
                       if (narrow) {
                         return Column(
@@ -6092,8 +6992,14 @@ class _LedgerPageState extends State<LedgerPage> {
                     if (widget.useIncomeExpenseToggle) ...[
                       SegmentedButton<String>(
                         segments: [
-                          ButtonSegment(value: 'income', label: Text(uiT('Income'))),
-                          ButtonSegment(value: 'expense', label: Text(uiT('Expense'))),
+                          ButtonSegment(
+                            value: 'income',
+                            label: Text(uiT('Income')),
+                          ),
+                          ButtonSegment(
+                            value: 'expense',
+                            label: Text(uiT('Expense')),
+                          ),
                         ],
                         selected: {type},
                         onSelectionChanged: (s) =>
@@ -6103,7 +7009,9 @@ class _LedgerPageState extends State<LedgerPage> {
                     ],
                     TextField(
                       controller: nameCtrl,
-                      decoration: InputDecoration(labelText: widget.personLabel),
+                      decoration: InputDecoration(
+                        labelText: widget.personLabel,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -6114,7 +7022,9 @@ class _LedgerPageState extends State<LedgerPage> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: noteCtrl,
-                      decoration: InputDecoration(labelText: uiT('Note (optional)')),
+                      decoration: InputDecoration(
+                        labelText: uiT('Note (optional)'),
+                      ),
                     ),
                   ],
                 ),
@@ -6185,8 +7095,8 @@ class _LedgerPageState extends State<LedgerPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: widget.accentColor,
@@ -6251,20 +7161,29 @@ class _LedgerPageState extends State<LedgerPage> {
                               'MMK ${e.amount.toStringAsFixed(2)}',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isExpense ? Colors.red : widget.accentColor,
+                                color: isExpense
+                                    ? Colors.red
+                                    : widget.accentColor,
                               ),
                             ),
                             if (!e.id.startsWith('payment:'))
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.grey,
+                                ),
                                 onPressed: () async {
                                   if (widget.readOnly) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
                                           widget.title == 'Pay Yan'
-                                              ? uiT('Pay Yan entries come from IncomingSupply. Update the purchase payment instead.')
-                                              : uiT('Ya Yan entries come from Sale. Update the sale payment instead.'),
+                                              ? uiT(
+                                                  'Pay Yan entries come from IncomingSupply. Update the purchase payment instead.',
+                                                )
+                                              : uiT(
+                                                  'Ya Yan entries come from Sale. Update the sale payment instead.',
+                                                ),
                                         ),
                                       ),
                                     );
@@ -6277,7 +7196,11 @@ class _LedgerPageState extends State<LedgerPage> {
                             else
                               Tooltip(
                                 message: uiT('Linked payment transaction'),
-                                child: const Icon(Icons.link, size: 20, color: Colors.grey),
+                                child: const Icon(
+                                  Icons.link,
+                                  size: 20,
+                                  color: Colors.grey,
+                                ),
                               ),
                           ],
                         ),
@@ -6314,8 +7237,9 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
   final TextEditingController _saleUnitController = TextEditingController();
   final TextEditingController _incomingConversionController =
       TextEditingController(text: '1');
-  final TextEditingController _saleConversionController =
-      TextEditingController(text: '1');
+  final TextEditingController _saleConversionController = TextEditingController(
+    text: '1',
+  );
   final TextEditingController _price1Controller = TextEditingController();
   final TextEditingController _price2Controller = TextEditingController();
   final TextEditingController _price3Controller = TextEditingController();
@@ -6373,10 +7297,12 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
       _typeController.text = product.type;
       _subTypeController.text = product.subType;
       _measurementController.text = product.measurement;
-      _incomingUnitController.text =
-          product.incomingUnit.isEmpty ? 'unit' : product.incomingUnit;
-      _saleUnitController.text =
-          product.saleUnit.isEmpty ? 'unit' : product.saleUnit;
+      _incomingUnitController.text = product.incomingUnit.isEmpty
+          ? 'unit'
+          : product.incomingUnit;
+      _saleUnitController.text = product.saleUnit.isEmpty
+          ? 'unit'
+          : product.saleUnit;
       _incomingConversionController.text = _numberText(
         product.incomingStockUnitsPerInput > 0
             ? product.incomingStockUnitsPerInput
@@ -6408,16 +7334,21 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
   }
 
   List<Person> get _suppliers {
-    final list = AppData.instance.people
-        .where((person) => person.category.toLowerCase() == 'supplier')
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final list =
+        AppData.instance.people
+            .where((person) => person.category.toLowerCase() == 'supplier')
+            .toList()
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
     return list;
   }
 
   List<String> _supplierNames({String? current}) {
     final names = _suppliers.map((supplier) => supplier.name).toList();
-    if (current != null && current.trim().isNotEmpty && !names.contains(current)) {
+    if (current != null &&
+        current.trim().isNotEmpty &&
+        !names.contains(current)) {
       names.insert(0, current);
     }
     return names;
@@ -6425,15 +7356,15 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
 
   List<Product> get _parentCandidates {
     final editing = _editingId;
-    final list = AppData.instance.products.where((product) {
-      if (editing != null && product.id == editing) return false;
-      return !product.subtractFromParentStock;
-    }).toList()
-      ..sort((a, b) {
-        final aLabel = '${a.name} ${a.type} ${a.subType}'.toLowerCase();
-        final bLabel = '${b.name} ${b.type} ${b.subType}'.toLowerCase();
-        return aLabel.compareTo(bLabel);
-      });
+    final list =
+        AppData.instance.products.where((product) {
+          if (editing != null && product.id == editing) return false;
+          return !product.subtractFromParentStock;
+        }).toList()..sort((a, b) {
+          final aLabel = '${a.name} ${a.type} ${a.subType}'.toLowerCase();
+          final bLabel = '${b.name} ${b.type} ${b.subType}'.toLowerCase();
+          return aLabel.compareTo(bLabel);
+        });
     return list;
   }
 
@@ -6503,7 +7434,9 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
         measurement = parent.measurement.trim();
       }
       if (incomingUnit.isEmpty || incomingUnit == 'unit') {
-        incomingUnit = saleUnit.isEmpty || saleUnit == 'unit' ? 'unit' : saleUnit;
+        incomingUnit = saleUnit.isEmpty || saleUnit == 'unit'
+            ? 'unit'
+            : saleUnit;
       }
       incomingConversion = 1;
     }
@@ -6512,8 +7445,8 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
     if (type == 'lpg') {
       measurement = measurement.isEmpty
           ? (parent?.measurement.trim().isNotEmpty == true
-              ? parent!.measurement.trim()
-              : 'kg')
+                ? parent!.measurement.trim()
+                : 'kg')
           : measurement;
 
       // Main LPG stock is received in kg only. The user never chooses a
@@ -6597,21 +7530,33 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
 
     if (_subtractFromParentStock && parent == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Select the main stock product for this selling variant.'))),
+        SnackBar(
+          content: Text(
+            uiT('Select the main stock product for this selling variant.'),
+          ),
+        ),
       );
       return;
     }
 
     if (incomingConversion <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Incoming stock conversion must be greater than zero.'))),
+        SnackBar(
+          content: Text(
+            uiT('Incoming stock conversion must be greater than zero.'),
+          ),
+        ),
       );
       return;
     }
 
     if (!_subtractFromParentStock && saleConversion <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Stock used per direct sale unit must be greater than zero.'))),
+        SnackBar(
+          content: Text(
+            uiT('Stock used per direct sale unit must be greater than zero.'),
+          ),
+        ),
       );
       return;
     }
@@ -6620,7 +7565,11 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
         saleMode == 'fixed' &&
         saleConversion <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Enter how much parent stock one sale unit consumes.'))),
+        SnackBar(
+          content: Text(
+            uiT('Enter how much parent stock one sale unit consumes.'),
+          ),
+        ),
       );
       return;
     }
@@ -6656,13 +7605,16 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
       if (!mounted) return;
       setState(_clearForm);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(wasEditing ? uiT('Product updated.') : uiT('Product created.'))),
+        SnackBar(
+          content: Text(
+            wasEditing ? uiT('Product updated.') : uiT('Product created.'),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiError(e))));
     }
   }
 
@@ -6679,12 +7631,17 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
       builder: (dialogContext) => AlertDialog(
         title: Text(uiT('Delete product?')),
         content: Text(
-          uiF('Delete "{name}" ({kind})?\n\nIncoming records: {incoming}\nSaved sale items: {sales}\n\nParent stock products cannot be deleted while selling variants depend on them.', {
-            'name': product.name,
-            'kind': product.subType.isEmpty ? product.type : '${product.type} • ${product.subType}',
-            'incoming': incomingCount.toString(),
-            'sales': saleCount.toString(),
-          }),
+          uiF(
+            'Delete "{name}" ({kind})?\n\nIncoming records: {incoming}\nSaved sale items: {sales}\n\nParent stock products cannot be deleted while selling variants depend on them.',
+            {
+              'name': product.name,
+              'kind': product.subType.isEmpty
+                  ? product.type
+                  : '${product.type} • ${product.subType}',
+              'incoming': incomingCount.toString(),
+              'sales': saleCount.toString(),
+            },
+          ),
         ),
         actions: [
           TextButton(
@@ -6707,14 +7664,12 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
       setState(() {
         if (_editingId == product.id) _clearForm();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Product deleted.'))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiT('Product deleted.'))));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiError(e))));
     }
   }
 
@@ -6777,7 +7732,9 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
 
     if (_selectedParentProductId != null &&
         !parents.any((p) => p.id == _selectedParentProductId)) {
-      final currentParent = AppData.instance.productById(_selectedParentProductId!);
+      final currentParent = AppData.instance.productById(
+        _selectedParentProductId!,
+      );
       if (currentParent != null &&
           currentParent.id != _editingId &&
           !currentParent.subtractFromParentStock) {
@@ -6788,8 +7745,8 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -6828,8 +7785,13 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          uiT('Enter the essentials. Inventory rules are filled automatically for common products.'),
-                          style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                          uiT(
+                            'Enter the essentials. Inventory rules are filled automatically for common products.',
+                          ),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(height: 16),
 
@@ -6858,8 +7820,14 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                           spacing: 8,
                           runSpacing: 6,
                           children: [
-                            _quickPreset('LPG 220g', () => _applyLpgPreset('220g')),
-                            _quickPreset('LPG Viss', () => _applyLpgPreset('Viss')),
+                            _quickPreset(
+                              'LPG 220g',
+                              () => _applyLpgPreset('220g'),
+                            ),
+                            _quickPreset(
+                              'LPG Viss',
+                              () => _applyLpgPreset('Viss'),
+                            ),
                             _quickPreset('LPG Kg', () => _applyLpgPreset('Kg')),
                           ],
                         ),
@@ -6869,12 +7837,16 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                           _field(
                             _price1Controller,
                             'Selling price',
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                           ),
                           _field(
                             _costController,
                             'Cost per sale unit',
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             hintText: uiT('Optional'),
                           ),
                         ]),
@@ -6884,7 +7856,9 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                           contentPadding: EdgeInsets.zero,
                           title: Text(uiT('This is a selling variant')),
                           subtitle: Text(
-                            uiT('Turn this on when the product uses stock from another product, such as LPG 220g or LPG Viss.'),
+                            uiT(
+                              'Turn this on when the product uses stock from another product, such as LPG 220g or LPG Viss.',
+                            ),
                           ),
                           value: _subtractFromParentStock,
                           onChanged: (value) {
@@ -6926,8 +7900,8 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                             onChanged: parents.isEmpty
                                 ? null
                                 : (value) => setState(
-                                      () => _selectedParentProductId = value,
-                                    ),
+                                    () => _selectedParentProductId = value,
+                                  ),
                           ),
                           const SizedBox(height: 10),
                           DropdownButtonFormField<String>(
@@ -6955,9 +7929,8 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
 
                         const SizedBox(height: 8),
                         Theme(
-                          data: Theme.of(context).copyWith(
-                            dividerColor: Colors.transparent,
-                          ),
+                          data: Theme.of(context)
+                              .copyWith(dividerColor: Colors.transparent),
                           child: ExpansionTile(
                             tilePadding: EdgeInsets.zero,
                             initiallyExpanded: _showAdvanced,
@@ -6974,8 +7947,13 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                               Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  uiT('These values are stored for the inventory engine. Most products can use the automatic defaults.'),
-                                  style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                  uiT(
+                                    'These values are stored for the inventory engine. Most products can use the automatic defaults.',
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -7019,13 +7997,21 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                                   _field(
                                     _incomingConversionController,
                                     'Incoming conversion',
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                    hintText: uiT('How incoming units become stock'),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
+                                    hintText: uiT(
+                                      'How incoming units become stock',
+                                    ),
                                   ),
                                 _field(
                                   _saleConversionController,
                                   'Sale conversion',
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
                                   hintText: uiT('220g → 0.22 kg'),
                                 ),
                               ]),
@@ -7046,13 +8032,19 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                                 _field(
                                   _price2Controller,
                                   'Selling price 2',
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
                                   hintText: uiT('Optional'),
                                 ),
                                 _field(
                                   _price3Controller,
                                   'Selling price 3',
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
                                   hintText: uiT('Optional'),
                                 ),
                               ]),
@@ -7061,7 +8053,9 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                                 initialValue: _selectedSupplier ?? '',
                                 isExpanded: true,
                                 decoration: InputDecoration(
-                                  labelText: uiT('Default / preferred supplier'),
+                                  labelText: uiT(
+                                    'Default / preferred supplier',
+                                  ),
                                   border: OutlineInputBorder(),
                                 ),
                                 items: [
@@ -7069,19 +8063,21 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                                     value: '',
                                     child: Text(uiT('No supplier selected')),
                                   ),
-                                  ..._supplierNames(current: _selectedSupplier).map(
-                                    (name) => DropdownMenuItem<String>(
-                                      value: name,
-                                      child: Text(
-                                        name,
-                                        overflow: TextOverflow.ellipsis,
+                                  ..._supplierNames(current: _selectedSupplier)
+                                      .map(
+                                        (name) => DropdownMenuItem<String>(
+                                          value: name,
+                                          child: Text(
+                                            name,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
                                 ],
                                 onChanged: (value) => setState(() {
-                                  _selectedSupplier =
-                                      value?.isEmpty == true ? null : value;
+                                  _selectedSupplier = value?.isEmpty == true
+                                      ? null
+                                      : value;
                                 }),
                               ),
                               const SizedBox(height: 8),
@@ -7120,10 +8116,20 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                     Expanded(
                       child: Text(
                         uiT('Product Catalog'),
-                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    Text(uiF('{count} {label}', {'count': products.length.toString(), 'label': uiT(products.length == 1 ? 'product' : 'products')})),
+                    Text(
+                      uiF('{count} {label}', {
+                        'count': products.length.toString(),
+                        'label': uiT(
+                          products.length == 1 ? 'product' : 'products',
+                        ),
+                      }),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -7131,7 +8137,9 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                   Card(
                     child: Padding(
                       padding: EdgeInsets.all(20),
-                      child: Text(uiT('No products yet. Create a product above first.')),
+                      child: Text(
+                        uiT('No products yet. Create a product above first.'),
+                      ),
                     ),
                   )
                 else
@@ -7151,8 +8159,29 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                         ),
                         subtitle: Text(
                           product.subtractFromParentStock
-                              ? uiF('Selling variant • Parent: {parent} • Sale unit: {unit}', {'parent': AppData.instance.productById(product.parentProductId)?.name ?? uiT('Missing'), 'unit': product.saleUnit})
-                              : uiF('Stock: {stock} {unit} • Incoming: {incoming}', {'stock': AppData._formatNumber(product.stock), 'unit': product.measurement, 'incoming': product.incomingUnit}),
+                              ? uiF(
+                                  'Selling variant • Parent: {parent} • Sale unit: {unit}',
+                                  {
+                                    'parent':
+                                        AppData.instance
+                                            .productById(
+                                              product.parentProductId,
+                                            )
+                                            ?.name ??
+                                        uiT('Missing'),
+                                    'unit': product.saleUnit,
+                                  },
+                                )
+                              : uiF(
+                                  'Stock: {stock} {unit} • Incoming: {incoming}',
+                                  {
+                                    'stock': AppData._formatNumber(
+                                      product.stock,
+                                    ),
+                                    'unit': product.measurement,
+                                    'incoming': product.incomingUnit,
+                                  },
+                                ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -7166,7 +8195,10 @@ class _ProductCatalogPageState extends State<ProductCatalogPage> {
                             ),
                             IconButton(
                               tooltip: uiT('Delete product'),
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
                               onPressed: () => _deleteProduct(product),
                             ),
                           ],
@@ -7214,18 +8246,24 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
       : AppData.instance.productById(_selectedProductId!);
 
   List<Product> get _products {
-    final list = AppData.instance.products
-        .where((product) => !product.subtractFromParentStock)
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final list =
+        AppData.instance.products
+            .where((product) => !product.subtractFromParentStock)
+            .toList()
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
     return list;
   }
 
   List<Person> get _suppliers {
-    final list = AppData.instance.people
-        .where((person) => person.category.toLowerCase() == 'supplier')
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final list =
+        AppData.instance.people
+            .where((person) => person.category.toLowerCase() == 'supplier')
+            .toList()
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
     return list;
   }
 
@@ -7250,14 +8288,20 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
     final product = _selectedProduct;
     if (product == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Please select an existing main stock product first.'))),
+        SnackBar(
+          content: Text(
+            uiT('Please select an existing main stock product first.'),
+          ),
+        ),
       );
       return;
     }
 
     if (product.subtractFromParentStock) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Selling variants cannot receive stock directly.'))),
+        SnackBar(
+          content: Text(uiT('Selling variants cannot receive stock directly.')),
+        ),
       );
       return;
     }
@@ -7265,7 +8309,9 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
     final quantity = double.tryParse(_amountController.text.trim()) ?? 0;
     if (quantity <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Incoming amount must be greater than zero.'))),
+        SnackBar(
+          content: Text(uiT('Incoming amount must be greater than zero.')),
+        ),
       );
       return;
     }
@@ -7274,9 +8320,9 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
         double.tryParse(_costController.text.trim()) ??
         _incomingCostForProduct(product);
     if (cost < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Cost cannot be negative.'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(uiT('Cost cannot be negative.'))));
       return;
     }
 
@@ -7284,14 +8330,22 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
     final paid = double.tryParse(_paidController.text.trim()) ?? 0;
     if (paid < 0 || paid > total) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Paid amount must be between 0 and the incoming total.'))),
+        SnackBar(
+          content: Text(
+            uiT('Paid amount must be between 0 and the incoming total.'),
+          ),
+        ),
       );
       return;
     }
 
     final stockAdded = quantity * product.incomingStockUnitsPerInput;
-    final stockUnit = product.measurement.isEmpty ? 'stock unit(s)' : product.measurement;
-    final inputUnit = product.incomingUnit.isEmpty ? 'unit' : product.incomingUnit;
+    final stockUnit = product.measurement.isEmpty
+        ? 'stock unit(s)'
+        : product.measurement;
+    final inputUnit = product.incomingUnit.isEmpty
+        ? 'unit'
+        : product.incomingUnit;
 
     try {
       await AppData.instance.addIncomingProduct(
@@ -7323,15 +8377,23 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            uiF('{product}: added {stock} {stockUnit} from {quantity} {inputUnit}.', {'product': product.name, 'stock': _number(stockAdded), 'stockUnit': stockUnit, 'quantity': _number(quantity), 'inputUnit': inputUnit}),
+            uiF(
+              '{product}: added {stock} {stockUnit} from {quantity} {inputUnit}.',
+              {
+                'product': product.name,
+                'stock': _number(stockAdded),
+                'stockUnit': stockUnit,
+                'quantity': _number(quantity),
+                'inputUnit': inputUnit,
+              },
+            ),
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiError(e))));
     }
   }
 
@@ -7342,16 +8404,20 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
         title: Text(uiT('Delete incoming record?')),
         content: Text(
           uiF(
-          '{product} • {qty} {inputUnit} • {adds} {stockUnit}\n\n{details}',
-          {
-            'product': supply.product,
-            'qty': _number(supply.quantity),
-            'inputUnit': supply.inputUnit.isEmpty ? uiT('Unit') : supply.inputUnit,
-            'adds': _number(supply.stockAdded),
-            'stockUnit': uiT('stock units'),
-            'details': uiT('This will reverse the converted stock amount and remove its linked supplier payment/payable record.'),
-          },
-        ),
+            '{product} • {qty} {inputUnit} • {adds} {stockUnit}\n\n{details}',
+            {
+              'product': supply.product,
+              'qty': _number(supply.quantity),
+              'inputUnit': supply.inputUnit.isEmpty
+                  ? uiT('Unit')
+                  : supply.inputUnit,
+              'adds': _number(supply.stockAdded),
+              'stockUnit': uiT('stock units'),
+              'details': uiT(
+                'This will reverse the converted stock amount and remove its linked supplier payment/payable record.',
+              ),
+            },
+          ),
         ),
         actions: [
           TextButton(
@@ -7373,13 +8439,14 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
       if (!mounted) return;
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Incoming record deleted and stock reversed.'))),
+        SnackBar(
+          content: Text(uiT('Incoming record deleted and stock reversed.')),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiError(e))));
     }
   }
 
@@ -7392,22 +8459,24 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
     if (_selectedProductId != null && product == null) {
       _selectedProductId = null;
     }
-    if (_selectedSupplier != null && !suppliers.any((s) => s.name == _selectedSupplier)) {
+    if (_selectedSupplier != null &&
+        !suppliers.any((s) => s.name == _selectedSupplier)) {
       _selectedSupplier = null;
     }
 
-    final isLpgProduct = product?.type.trim().toLowerCase() == 'lpg' &&
+    final isLpgProduct =
+        product?.type.trim().toLowerCase() == 'lpg' &&
         product?.subtractFromParentStock != true;
     final incomingUnit = isLpgProduct
         ? 'kg'
         : (product?.incomingUnit.trim().isNotEmpty == true
-            ? product!.incomingUnit
-            : 'unit');
+              ? product!.incomingUnit
+              : 'unit');
     final stockUnit = isLpgProduct
         ? 'kg'
         : (product?.measurement.trim().isNotEmpty == true
-            ? product!.measurement
-            : 'stock units');
+              ? product!.measurement
+              : 'stock units');
     final conversion = isLpgProduct
         ? 1.0
         : (product?.incomingStockUnitsPerInput ?? 1);
@@ -7415,8 +8484,8 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -7434,7 +8503,10 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                       children: [
                         Text(
                           uiT('Record Incoming Stock'),
-                          style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
@@ -7443,9 +8515,11 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                             labelText: uiT('Select Main Stock Product'),
                             border: OutlineInputBorder(),
                           ),
-                          hint: Text(products.isEmpty
-                              ? uiT('No main stock products created yet')
-                              : uiT('Select an existing main stock product')),
+                          hint: Text(
+                            products.isEmpty
+                                ? uiT('No main stock products created yet')
+                                : uiT('Select an existing main stock product'),
+                          ),
                           items: products.map((p) {
                             return DropdownMenuItem<String>(
                               value: p.id,
@@ -7484,27 +8558,63 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  Text(
+                                    product.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    uiF('Current stock: {stock} {unit}', {'stock': _number(product.stock), 'unit': stockUnit}),
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                    uiF('Current stock: {stock} {unit}', {
+                                      'stock': _number(product.stock),
+                                      'unit': stockUnit,
+                                    }),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                   Text(
                                     isLpgProduct
-                                        ? uiT('LPG incoming: 1 kg → 1 kg (kg-only input)')
-                                        : uiF('1 {input} → {output} {stockUnit}', {'input': incomingUnit, 'output': _number(conversion), 'stockUnit': stockUnit}),
+                                        ? uiT(
+                                            'LPG incoming: 1 kg → 1 kg (kg-only input)',
+                                          )
+                                        : uiF(
+                                            '1 {input} → {output} {stockUnit}',
+                                            {
+                                              'input': incomingUnit,
+                                              'output': _number(conversion),
+                                              'stockUnit': stockUnit,
+                                            },
+                                          ),
                                   ),
-                                  if (product.type.isNotEmpty || product.subType.isNotEmpty)
+                                  if (product.type.isNotEmpty ||
+                                      product.subType.isNotEmpty)
                                     Text(
-                                      [product.type, product.subType]
-                                          .where((x) => x.isNotEmpty)
-                                          .join(' • '),
+                                      [
+                                        product.type,
+                                        product.subType,
+                                      ].where((x) => x.isNotEmpty).join(' • '),
                                     ),
                                   Text(
                                     isLpgProduct
-                                        ? uiF('Current incoming cost per kg: MMK {amount}', {'amount': _incomingCostForProduct(product).toStringAsFixed(2)})
-                                        : uiF('Current cost per {unit}: MMK {amount}', {'unit': incomingUnit, 'amount': product.cost.toStringAsFixed(2)}),
+                                        ? uiF(
+                                            'Current incoming cost per kg: MMK {amount}',
+                                            {
+                                              'amount': _incomingCostForProduct(
+                                                product,
+                                              ).toStringAsFixed(2),
+                                            },
+                                          )
+                                        : uiF(
+                                            'Current cost per {unit}: MMK {amount}',
+                                            {
+                                              'unit': incomingUnit,
+                                              'amount': product.cost
+                                                  .toStringAsFixed(2),
+                                            },
+                                          ),
                                   ),
                                 ],
                               ),
@@ -7513,11 +8623,15 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                         const SizedBox(height: 12),
                         TextField(
                           controller: _amountController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           decoration: InputDecoration(
                             labelText: product == null
                                 ? uiT('Incoming quantity')
-                                : uiF('Incoming quantity ({unit})', {'unit': incomingUnit}),
+                                : uiF('Incoming quantity ({unit})', {
+                                    'unit': incomingUnit,
+                                  }),
                             border: const OutlineInputBorder(),
                           ),
                           onChanged: (_) => setState(() {}),
@@ -7526,22 +8640,42 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                           const SizedBox(height: 6),
                           Text(
                             isLpgProduct
-                                ? uiT('Enter LPG quantity directly in kg. No cylinder input is used.')
-                                : uiF('Stock added: {qty} {unit}', {'qty': _number((double.tryParse(_amountController.text) ?? 0) * conversion), 'unit': stockUnit}),
+                                ? uiT(
+                                    'Enter LPG quantity directly in kg. No cylinder input is used.',
+                                  )
+                                : uiF('Stock added: {qty} {unit}', {
+                                    'qty': _number(
+                                      (double.tryParse(
+                                                _amountController.text,
+                                              ) ??
+                                              0) *
+                                          conversion,
+                                    ),
+                                    'unit': stockUnit,
+                                  }),
                             style: const TextStyle(color: Colors.black54),
                           ),
                           if (isLpgProduct)
                             Text(
-                              uiF('Stock added: {qty} kg', {'qty': _number(double.tryParse(_amountController.text) ?? 0)}),
+                              uiF('Stock added: {qty} kg', {
+                                'qty': _number(
+                                  double.tryParse(_amountController.text) ?? 0,
+                                ),
+                              }),
                               style: const TextStyle(color: Colors.black54),
                             ),
                         ],
                         const SizedBox(height: 12),
                         TextField(
                           controller: _costController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           decoration: InputDecoration(
-                            labelText: uiF('Cost per {unit} for this incoming', {'unit': incomingUnit}),
+                            labelText: uiF(
+                              'Cost per {unit} for this incoming',
+                              {'unit': incomingUnit},
+                            ),
                             border: const OutlineInputBorder(),
                           ),
                         ),
@@ -7565,13 +8699,17 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                             ),
                           ],
                           onChanged: (value) => setState(() {
-                            _selectedSupplier = value?.isEmpty == true ? null : value;
+                            _selectedSupplier = value?.isEmpty == true
+                                ? null
+                                : value;
                           }),
                         ),
                         if (suppliers.isEmpty) ...[
                           const SizedBox(height: 6),
                           Text(
-                            uiT('Add suppliers from the Suppliers page to use named supplier records in incoming stock.'),
+                            uiT(
+                              'Add suppliers from the Suppliers page to use named supplier records in incoming stock.',
+                            ),
                             style: TextStyle(color: Colors.orange),
                           ),
                         ],
@@ -7590,13 +8728,17 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                           },
                           icon: const Icon(Icons.calendar_today_outlined),
                           label: Text(
-                            uiF('Incoming date: {date}', {'date': _formatDateOnly(_incomingDate)}),
+                            uiF('Incoming date: {date}', {
+                              'date': _formatDateOnly(_incomingDate),
+                            }),
                           ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _paidController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           decoration: InputDecoration(
                             labelText: uiT('Amount paid to supplier'),
                             border: OutlineInputBorder(),
@@ -7610,9 +8752,18 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                             border: OutlineInputBorder(),
                           ),
                           items: [
-                            DropdownMenuItem(value: 'Cash', child: Text(uiT('Cash'))),
-                            DropdownMenuItem(value: 'Bank', child: Text(uiT('Bank'))),
-                            DropdownMenuItem(value: 'Mobile', child: Text(uiT('Mobile'))),
+                            DropdownMenuItem(
+                              value: 'Cash',
+                              child: Text(uiT('Cash')),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Bank',
+                              child: Text(uiT('Bank')),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Mobile',
+                              child: Text(uiT('Mobile')),
+                            ),
                           ],
                           onChanged: (value) => setState(() {
                             _paymentMethod = value ?? 'Cash';
@@ -7634,7 +8785,9 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                         if (products.isEmpty) ...[
                           const SizedBox(height: 10),
                           Text(
-                            uiT('Create the LPG Kg main stock product first. LPG 220g and LPG Viss are selling variants and cannot receive stock directly.'),
+                            uiT(
+                              'Create the LPG Kg main stock product first. LPG 220g and LPG Viss are selling variants and cannot receive stock directly.',
+                            ),
                             style: TextStyle(color: Colors.orange),
                           ),
                         ],
@@ -7643,7 +8796,13 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text(uiT('Incoming History'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+                Text(
+                  uiT('Incoming History'),
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 if (AppData.instance.incomingSupplies.isEmpty)
                   Card(
@@ -7655,7 +8814,9 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                 else
                   ...AppData.instance.incomingSupplies.reversed.map((supply) {
                     final paid = AppData.instance.paidForSupply(supply.id);
-                    final balance = (supply.total - paid).clamp(0, double.infinity).toDouble();
+                    final balance = (supply.total - paid)
+                        .clamp(0, double.infinity)
+                        .toDouble();
                     final status = paid >= supply.total - .005
                         ? 'PAID'
                         : (paid > .005 ? 'PARTIALLY PAID' : 'UNPAID');
@@ -7667,12 +8828,22 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                       '{qty} {inputUnit} → {stock} {stockUnit} • MMK {cost} per {unit}{supplier} • {date}',
                       {
                         'qty': _number(supply.quantity),
-                        'inputUnit': supply.inputUnit.isEmpty ? uiT('Unit') : supply.inputUnit,
+                        'inputUnit': supply.inputUnit.isEmpty
+                            ? uiT('Unit')
+                            : supply.inputUnit,
                         'stock': _number(supply.stockAdded),
-                        'stockUnit': AppData.instance.productById(supply.productId)?.measurement ?? uiT('stock units'),
+                        'stockUnit':
+                            AppData.instance
+                                .productById(supply.productId)
+                                ?.measurement ??
+                            uiT('stock units'),
                         'cost': supply.costPerUnit.toStringAsFixed(2),
-                        'unit': supply.inputUnit.isEmpty ? uiT('Unit') : supply.inputUnit,
-                        'supplier': supply.supplier.isEmpty ? '' : ' • ${supply.supplier}',
+                        'unit': supply.inputUnit.isEmpty
+                            ? uiT('Unit')
+                            : supply.inputUnit,
+                        'supplier': supply.supplier.isEmpty
+                            ? ''
+                            : ' • ${supply.supplier}',
                         'date': _formatDateOnly(supply.date),
                       },
                     );
@@ -7685,7 +8856,9 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                           children: [
                             Text(
                               supply.product,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(detail, softWrap: true),
@@ -7705,14 +8878,20 @@ class _IncomingProductsPageState extends State<IncomingProductsPage> {
                                   ),
                                 ),
                                 Text(
-                                  uiF('Balance MMK {balance}', {'balance': balance.toStringAsFixed(0)}),
+                                  uiF('Balance MMK {balance}', {
+                                    'balance': balance.toStringAsFixed(0),
+                                  }),
                                   style: const TextStyle(fontSize: 11),
                                 ),
                                 IconButton(
                                   tooltip: uiT('Delete incoming record'),
                                   visualDensity: VisualDensity.compact,
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () => _confirmDeleteIncoming(supply),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () =>
+                                      _confirmDeleteIncoming(supply),
                                 ),
                               ],
                             ),
@@ -7757,7 +8936,9 @@ class _InStockProductsPageState extends State<InStockProductsPage> {
         content: Text(
           uiF('Remove product {name}?\n\n{details}', {
             'name': p.name,
-            'details': uiT('This will also delete its linked Incoming Products records and supplier payment records. Saved sales using this product are protected and will block deletion.'),
+            'details': uiT(
+              'This will also delete its linked Incoming Products records and supplier payment records. Saved sales using this product are protected and will block deletion.',
+            ),
           }),
         ),
         actions: [
@@ -7775,9 +8956,8 @@ class _InStockProductsPageState extends State<InStockProductsPage> {
               } catch (e) {
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(uiError(e))),
-                );
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(uiError(e))));
               }
             },
             child: Text(uiT('Remove')),
@@ -7797,8 +8977,8 @@ class _InStockProductsPageState extends State<InStockProductsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -7824,7 +9004,11 @@ class _InStockProductsPageState extends State<InStockProductsPage> {
             Expanded(
               child: products.isEmpty
                   ? Center(
-                      child: Text(uiT('No products yet. Add a master product from Products, then add stock through Incoming Products.')),
+                      child: Text(
+                        uiT(
+                          'No products yet. Add a master product from Products, then add stock through Incoming Products.',
+                        ),
+                      ),
                     )
                   : SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -7841,30 +9025,57 @@ class _InStockProductsPageState extends State<InStockProductsPage> {
                           DataColumn(label: Text('')),
                         ],
                         rows: products.map((p) {
-                          final wholeNumber = p.stock == p.stock.roundToDouble();
-                          return DataRow(cells: [
-                            DataCell(Text(p.name)),
-                            DataCell(Text(
-                              [p.type, p.subType].where((s) => s.isNotEmpty).join(' / '),
-                            )),
-                            DataCell(Text(
-                              p.stock.toStringAsFixed(wholeNumber ? 0 : 2),
-                              style: TextStyle(
-                                color: p.stock <= 0 ? Colors.red : Colors.black87,
-                                fontWeight: FontWeight.bold,
+                          final wholeNumber =
+                              p.stock == p.stock.roundToDouble();
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(p.name)),
+                              DataCell(
+                                Text(
+                                  [
+                                    p.type,
+                                    p.subType,
+                                  ].where((s) => s.isNotEmpty).join(' / '),
+                                ),
                               ),
-                            )),
-                            DataCell(Text(p.measurement)),
-                            DataCell(Text('MMK ${p.sellingPrice1.toStringAsFixed(2)}')),
-                            DataCell(Text('MMK ${p.cost.toStringAsFixed(2)}')),
-                            DataCell(Text(p.lastIncomingDate == null ? '-' : _formatDateOnly(p.lastIncomingDate!))),
-                            DataCell(
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                onPressed: () => _confirmDelete(p),
+                              DataCell(
+                                Text(
+                                  p.stock.toStringAsFixed(wholeNumber ? 0 : 2),
+                                  style: TextStyle(
+                                    color: p.stock <= 0
+                                        ? Colors.red
+                                        : Colors.black87,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ]);
+                              DataCell(Text(p.measurement)),
+                              DataCell(
+                                Text(
+                                  'MMK ${p.sellingPrice1.toStringAsFixed(2)}',
+                                ),
+                              ),
+                              DataCell(
+                                Text('MMK ${p.cost.toStringAsFixed(2)}'),
+                              ),
+                              DataCell(
+                                Text(
+                                  p.lastIncomingDate == null
+                                      ? '-'
+                                      : _formatDateOnly(p.lastIncomingDate!),
+                                ),
+                              ),
+                              DataCell(
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _confirmDelete(p),
+                                ),
+                              ),
+                            ],
+                          );
                         }).toList(),
                       ),
                     ),
@@ -7890,8 +9101,8 @@ class CustomerPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -7956,9 +9167,7 @@ class CustomerPage extends StatelessWidget {
     return Card(
       color: PosDashboardScreen.cardBg,
       elevation: 1.5,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: () {
@@ -7966,10 +9175,7 @@ class CustomerPage extends StatelessWidget {
               ? const SuppliersPage(title: 'Suppliers')
               : const CustomersPage(title: 'Customers');
 
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => page),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => page));
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -8034,21 +9240,29 @@ class _AddPeoplePageState extends State<AddPeoplePage> {
   void _save() {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Please enter a name'))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiT('Please enter a name'))));
       return;
     }
 
-    AppData.instance.addPerson(Person(
-      name: name,
-      category: _category,
-      phone: _phoneNumberController.text.trim(),
-      address: _addressController.text.trim(),
-    ));
+    AppData.instance.addPerson(
+      Person(
+        name: name,
+        category: _category,
+        phone: _phoneNumberController.text.trim(),
+        address: _addressController.text.trim(),
+      ),
+    );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(uiF('{name} added as {category}', {'name': name, 'category': uiT(_category)}))),
+      SnackBar(
+        content: Text(
+          uiF('{name} added as {category}', {
+            'name': name,
+            'category': uiT(_category),
+          }),
+        ),
+      ),
     );
 
     if (widget.presetCategory != null) {
@@ -8068,8 +9282,8 @@ class _AddPeoplePageState extends State<AddPeoplePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -8080,15 +9294,25 @@ class _AddPeoplePageState extends State<AddPeoplePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (widget.presetCategory == null) ...[
-                  Text(uiT('Category'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    uiT('Category'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   SegmentedButton<String>(
                     segments: [
-                      ButtonSegment(value: 'Customer', label: Text(uiT('Customer'))),
-                      ButtonSegment(value: 'Supplier', label: Text(uiT('Supplier'))),
+                      ButtonSegment(
+                        value: 'Customer',
+                        label: Text(uiT('Customer')),
+                      ),
+                      ButtonSegment(
+                        value: 'Supplier',
+                        label: Text(uiT('Supplier')),
+                      ),
                     ],
                     selected: {_category},
-                    onSelectionChanged: (s) => setState(() => _category = s.first),
+                    onSelectionChanged: (s) =>
+                        setState(() => _category = s.first),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -8122,7 +9346,10 @@ class _AddPeoplePageState extends State<AddPeoplePage> {
                     icon: const Icon(Icons.save_outlined),
                     label: Text(
                       uiT('Save'),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -8134,10 +9361,7 @@ class _AddPeoplePageState extends State<AddPeoplePage> {
     );
   }
 
-  Widget _responsiveFields(
-    BuildContext context,
-    Widget first,
-  ) {
+  Widget _responsiveFields(BuildContext context, Widget first) {
     final fields = <Widget>[first];
 
     return LayoutBuilder(
@@ -8206,7 +9430,11 @@ class CustomersPage extends StatelessWidget {
 }
 
 class PeopleListScaffold extends StatefulWidget {
-  const PeopleListScaffold({super.key, required this.title, required this.category});
+  const PeopleListScaffold({
+    super.key,
+    required this.title,
+    required this.category,
+  });
 
   final String title;
   final String category;
@@ -8236,14 +9464,15 @@ class _PeopleListScaffoldState extends State<PeopleListScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final people =
-        AppData.instance.people.where((p) => p.category == widget.category).toList();
+    final people = AppData.instance.people
+        .where((p) => p.category == widget.category)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: PosDashboardScreen.primaryGreen,
@@ -8252,7 +9481,13 @@ class _PeopleListScaffoldState extends State<PeopleListScaffold> {
       ),
       body: people.isEmpty
           ? Center(
-              child: Text(uiF('No {category}s yet. Tap + to add one.', {'category': uiT(widget.category == 'Supplier' ? 'Suppliers' : 'Customers')})),
+              child: Text(
+                uiF('No {category}s yet. Tap + to add one.', {
+                  'category': uiT(
+                    widget.category == 'Supplier' ? 'Suppliers' : 'Customers',
+                  ),
+                }),
+              ),
             )
           : ListView.separated(
               padding: const EdgeInsets.all(12),
@@ -8330,11 +9565,11 @@ class _SalePageState extends State<SalePage> {
       .toList();
 
   List<Product> get _filteredProducts => AppData.instance.products.where((p) {
-        final matchesType = _selectedType == null || p.type == _selectedType;
-        final matchesSubType =
-            _selectedSubType == null || p.subType == _selectedSubType;
-        return matchesType && matchesSubType;
-      }).toList();
+    final matchesType = _selectedType == null || p.type == _selectedType;
+    final matchesSubType =
+        _selectedSubType == null || p.subType == _selectedSubType;
+    return matchesType && matchesSubType;
+  }).toList();
 
   List<Person> get _customers =>
       AppData.instance.people.where((p) => p.category == 'Customer').toList();
@@ -8360,8 +9595,10 @@ class _SalePageState extends State<SalePage> {
         _selectedSaleUnit = prod.saleConsumptionMode == 'kg_or_viss'
             ? 'kg'
             : (prod.saleUnit.trim().isEmpty
-                ? (prod.measurement.trim().isEmpty ? 'unit' : prod.measurement)
-                : prod.saleUnit.trim());
+                  ? (prod.measurement.trim().isEmpty
+                        ? 'unit'
+                        : prod.measurement)
+                  : prod.saleUnit.trim());
         if (prod.sellingPrice1 > 0) {
           _selectedPrice = prod.sellingPrice1;
         } else if (prod.sellingPrice2 > 0) {
@@ -8381,8 +9618,13 @@ class _SalePageState extends State<SalePage> {
   String _availableStockText(Product product) {
     final inventory = AppData.instance.inventoryProductForSale(product);
     if (inventory == null) return uiT('Parent stock missing');
-    final unit = inventory.measurement.isEmpty ? 'stock units' : inventory.measurement;
-    return uiF('Stock: {stock} {unit}', {'stock': AppData._formatNumber(inventory.stock), 'unit': unit});
+    final unit = inventory.measurement.isEmpty
+        ? 'stock units'
+        : inventory.measurement;
+    return uiF('Stock: {stock} {unit}', {
+      'stock': AppData._formatNumber(inventory.stock),
+      'unit': unit,
+    });
   }
 
   double _pendingStockForInventory(String inventoryProductId) {
@@ -8391,10 +9633,14 @@ class _SalePageState extends State<SalePage> {
       if (p == null) return sum;
       final inventory = AppData.instance.inventoryProductForSale(p);
       if (inventory == null || inventory.id != inventoryProductId) return sum;
-      return sum + (item.stockDeduction > 0
-          ? item.stockDeduction
-          : AppData.instance.stockConsumptionForSale(
-              p, item.quantity, saleUnit: item.saleUnit));
+      return sum +
+          (item.stockDeduction > 0
+              ? item.stockDeduction
+              : AppData.instance.stockConsumptionForSale(
+                  p,
+                  item.quantity,
+                  saleUnit: item.saleUnit,
+                ));
     });
   }
 
@@ -8406,7 +9652,11 @@ class _SalePageState extends State<SalePage> {
 
     if (prod == null || price <= 0 || qty <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Select a product, sale unit, price, and a valid quantity.'))),
+        SnackBar(
+          content: Text(
+            uiT('Select a product, sale unit, price, and a valid quantity.'),
+          ),
+        ),
       );
       return;
     }
@@ -8425,8 +9675,13 @@ class _SalePageState extends State<SalePage> {
       if (inventory == null) {
         throw StateError('This product is missing its parent stock product.');
       }
-      final deduction = AppData.instance.stockConsumptionForSale(prod, qty, saleUnit: saleUnit);
-      final available = inventory.stock - _pendingStockForInventory(inventory.id);
+      final deduction = AppData.instance.stockConsumptionForSale(
+        prod,
+        qty,
+        saleUnit: saleUnit,
+      );
+      final available =
+          inventory.stock - _pendingStockForInventory(inventory.id);
       if (deduction > available + 0.000001) {
         throw StateError(
           'Not enough stock. ${inventory.name} has only ${AppData._formatNumber(available)} ${inventory.measurement} available for this voucher.',
@@ -8434,16 +9689,18 @@ class _SalePageState extends State<SalePage> {
       }
 
       setState(() {
-        _items.add(SaleItem(
-          saleVoucherNumber: '',
-          product: _buildFullProductName(prod),
-          productId: prod.id,
-          quantity: qty,
-          sellingPrice: price,
-          saleUnit: saleUnit,
-          inventoryProductId: inventory.id,
-          stockDeduction: deduction,
-        ));
+        _items.add(
+          SaleItem(
+            saleVoucherNumber: '',
+            product: _buildFullProductName(prod),
+            productId: prod.id,
+            quantity: qty,
+            sellingPrice: price,
+            saleUnit: saleUnit,
+            inventoryProductId: inventory.id,
+            stockDeduction: deduction,
+          ),
+        );
         _selectedProduct = null;
         _selectedType = null;
         _selectedSubType = null;
@@ -8475,11 +9732,16 @@ class _SalePageState extends State<SalePage> {
     final price = _selectedPrice ?? 0.0;
     if (prod == null || price <= 0) return [];
     final qty = double.tryParse(_quantityController.text.trim()) ?? 1;
-    final saleUnit = _selectedSaleUnit ??
+    final saleUnit =
+        _selectedSaleUnit ??
         (prod.saleConsumptionMode == 'kg_or_viss' ? 'kg' : prod.saleUnit);
     double deduction = 0;
     try {
-      deduction = AppData.instance.stockConsumptionForSale(prod, qty, saleUnit: saleUnit);
+      deduction = AppData.instance.stockConsumptionForSale(
+        prod,
+        qty,
+        saleUnit: saleUnit,
+      );
     } catch (_) {}
     return [
       SaleItem(
@@ -8514,7 +9776,8 @@ class _SalePageState extends State<SalePage> {
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(uiT('Add at least one item before saving the voucher'))),
+          content: Text(uiT('Add at least one item before saving the voucher')),
+        ),
       );
       return;
     }
@@ -8589,13 +9852,21 @@ class _SalePageState extends State<SalePage> {
     buffer.writeln('Voucher No: ${AppData.instance.newVoucherNumber()}');
     buffer.writeln(uiF('Date: {date}', {'date': _formatDate(_selectedDate)}));
     buffer.writeln(
-        uiF('Customer: {customer}', {'customer': _nameController.text.isEmpty ? 'N/A' : _nameController.text}));
+      uiF('Customer: {customer}', {
+        'customer': _nameController.text.isEmpty ? 'N/A' : _nameController.text,
+      }),
+    );
     for (final item in _items) {
       buffer.writeln(
-          '${item.name} x${item.qty}${item.saleUnit.isEmpty ? '' : ' ${item.saleUnit}'} = MMK ${item.amount.toStringAsFixed(2)}');
+        '${item.name} x${item.qty}${item.saleUnit.isEmpty ? '' : ' ${item.saleUnit}'} = MMK ${item.amount.toStringAsFixed(2)}',
+      );
     }
-    buffer.writeln(uiF('Total: MMK {amount}', {'amount': _grandTotal.toStringAsFixed(2)}));
-    buffer.writeln(uiF('Paid: MMK {amount}', {'amount': _paid.toStringAsFixed(2)}));
+    buffer.writeln(
+      uiF('Total: MMK {amount}', {'amount': _grandTotal.toStringAsFixed(2)}),
+    );
+    buffer.writeln(
+      uiF('Paid: MMK {amount}', {'amount': _paid.toStringAsFixed(2)}),
+    );
     buffer.writeln('Balance: MMK ${(_grandTotal - _paid).toStringAsFixed(2)}');
     await Clipboard.setData(ClipboardData(text: buffer.toString()));
     if (mounted) {
@@ -8615,547 +9886,548 @@ class _SalePageState extends State<SalePage> {
 
   @override
   Widget build(BuildContext context) {
+    // ============================================================
+    // FORM WIDGET
+    // ============================================================
+    Widget buildForm() {
+      // Generate the price dropdown items.
+      // We use a Set so duplicate prices do not cause dropdown issues.
+      List<DropdownMenuItem<double>> priceItems = [];
 
-  // ============================================================
-  // FORM WIDGET
-  // ============================================================
-  Widget buildForm() {
-    // Generate the price dropdown items.
-    // We use a Set so duplicate prices do not cause dropdown issues.
-    List<DropdownMenuItem<double>> priceItems = [];
+      if (_selectedProduct != null) {
+        Set<double> validPrices = {};
 
-    if (_selectedProduct != null) {
-      Set<double> validPrices = {};
+        if (_selectedProduct!.sellingPrice1 > 0) {
+          validPrices.add(_selectedProduct!.sellingPrice1);
+        }
 
-      if (_selectedProduct!.sellingPrice1 > 0) {
-        validPrices.add(_selectedProduct!.sellingPrice1);
-      }
+        if (_selectedProduct!.sellingPrice2 > 0) {
+          validPrices.add(_selectedProduct!.sellingPrice2);
+        }
 
-      if (_selectedProduct!.sellingPrice2 > 0) {
-        validPrices.add(_selectedProduct!.sellingPrice2);
-      }
+        if (_selectedProduct!.sellingPrice3 > 0) {
+          validPrices.add(_selectedProduct!.sellingPrice3);
+        }
 
-      if (_selectedProduct!.sellingPrice3 > 0) {
-        validPrices.add(_selectedProduct!.sellingPrice3);
-      }
-
-      priceItems = validPrices
-          .map(
-            (p) => DropdownMenuItem<double>(
-              value: p,
-              child: Text('MMK ${p.toStringAsFixed(2)}'),
-            ),
-          )
-          .toList();
-    }
-
-    // Safety check: if current selected price is no longer available,
-    // reset it to null.
-    if (_selectedPrice != null &&
-        !priceItems.any((item) => item.value == _selectedPrice)) {
-      _selectedPrice = null;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          uiT('Voucher Details'),
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(4),
-                onTap: _selectDate,
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: uiT('Select Date'),
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today_outlined),
-                  ),
-                  child: Text(
-                    _formatDate(_selectedDate),
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
+        priceItems = validPrices
+            .map(
+              (p) => DropdownMenuItem<double>(
+                value: p,
+                child: Text('MMK ${p.toStringAsFixed(2)}'),
               ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 16),
-
-        // ========================================================
-        // CUSTOMER DROPDOWN
-        // ========================================================
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: _selectedCustomer,
-                decoration: InputDecoration(
-                  labelText: uiT('Select Registered Customer'),
-                  border: OutlineInputBorder(),
-                ),
-                items: _customers.map((c) {
-                  return DropdownMenuItem<String>(
-                    value: c.name,
-                    child: Text(c.name),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _selectedCustomer = val;
-
-                    if (val != null) {
-                      _nameController.text = val;
-                    }
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // ========================================================
-        // CUSTOMER NAME
-        // ========================================================
-        TextField(
-          controller: _nameController,
-          decoration: InputDecoration(
-            labelText: uiT('Customer Name (Manual Entry / Selected)'),
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (_) => setState(() {}),
-        ),
-
-        const Divider(height: 32),
-
-        // ========================================================
-        // PRODUCT TYPE + SUB TYPE
-        // ========================================================
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 560;
-
-            final typeField = DropdownButtonFormField<String>(
-              isExpanded: true,
-              initialValue: _selectedType,
-              decoration: InputDecoration(
-                labelText: uiT('Product Type'),
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                DropdownMenuItem<String>(
-                  value: null,
-                  child: Text(uiT('All Types'), overflow: TextOverflow.ellipsis),
-                ),
-                ..._availableTypes.map(
-                  (t) => DropdownMenuItem<String>(
-                    value: t,
-                    child: Text(t, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-              ],
-              onChanged: (val) {
-                setState(() {
-                  _selectedType = val;
-                  _selectedSubType = null;
-                  _selectedProduct = null;
-                  _selectedSaleUnit = null;
-                  _selectedPrice = null;
-                });
-              },
-            );
-
-            final subTypeField = DropdownButtonFormField<String>(
-              isExpanded: true,
-              initialValue: _selectedSubType,
-              decoration: InputDecoration(
-                labelText: uiT('Sub Type'),
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                DropdownMenuItem<String>(
-                  value: null,
-                  child: Text(uiT('All SubTypes'), overflow: TextOverflow.ellipsis),
-                ),
-                ..._availableSubTypes.map(
-                  (st) => DropdownMenuItem<String>(
-                    value: st,
-                    child: Text(st, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-              ],
-              onChanged: (val) {
-                setState(() {
-                  _selectedSubType = val;
-                  _selectedProduct = null;
-                  _selectedSaleUnit = null;
-                  _selectedPrice = null;
-                });
-              },
-            );
-
-            return compact
-                ? Column(
-                    children: [
-                      typeField,
-                      const SizedBox(height: 12),
-                      subTypeField,
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Expanded(child: typeField),
-                      const SizedBox(width: 12),
-                      Expanded(child: subTypeField),
-                    ],
-                  );
-          },
-        ),
-
-        const SizedBox(height: 16),
-
-        // ========================================================
-        // PRODUCT DROPDOWN
-        // ========================================================
-        DropdownButtonFormField<Product>(
-          isExpanded: true,
-          initialValue: _selectedProduct,
-          decoration: InputDecoration(
-            labelText: uiT('Select Product'),
-            border: OutlineInputBorder(),
-          ),
-          items: _filteredProducts.map((p) {
-            return DropdownMenuItem<Product>(
-              value: p,
-              child: Text('${p.name}${p.subType.isEmpty ? '' : ' • ${p.subType}'} (${_availableStockText(p)})', overflow: TextOverflow.ellipsis),
-            );
-          }).toList(),
-          onChanged: _onProductSelected,
-        ),
-
-        const SizedBox(height: 16),
-
-        if (_selectedProduct != null) ...[
-          const SizedBox(height: 12),
-          if (_selectedProduct!.saleConsumptionMode == 'kg_or_viss')
-            DropdownButtonFormField<String>(
-              initialValue: _selectedSaleUnit,
-              decoration: InputDecoration(
-                labelText: uiT('Legacy loose-gas sale unit'),
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                DropdownMenuItem(value: 'kg', child: Text(uiT('Kg'))),
-                DropdownMenuItem(value: 'viss', child: Text(uiT('Viss (1 viss = 1.6 kg)'))),
-              ],
-              onChanged: (value) => setState(() => _selectedSaleUnit = value),
             )
-          else
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: uiT('Sale unit'),
-                border: OutlineInputBorder(),
-              ),
-              child: Text(
-                (_selectedSaleUnit ?? _selectedProduct!.saleUnit).isEmpty
-                    ? uiT('Unit')
-                    : (_selectedSaleUnit ?? _selectedProduct!.saleUnit),
-              ),
-            ),
-        ],
+            .toList();
+      }
 
-        const SizedBox(height: 16),
+      // Safety check: if current selected price is no longer available,
+      // reset it to null.
+      if (_selectedPrice != null &&
+          !priceItems.any((item) => item.value == _selectedPrice)) {
+        _selectedPrice = null;
+      }
 
-        // ========================================================
-        // PRICE + QUANTITY
-        // ========================================================
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 560;
-
-            final priceField = DropdownButtonFormField<double>(
-              isExpanded: true,
-              initialValue: _selectedPrice,
-              decoration: InputDecoration(
-                labelText: uiT('Select Price'),
-                border: OutlineInputBorder(),
-              ),
-              items: priceItems,
-              onChanged: (val) {
-                setState(() {
-                  _selectedPrice = val;
-                });
-              },
-            );
-
-            final quantityField = TextField(
-              controller: _quantityController,
-              decoration: InputDecoration(
-                labelText: _selectedProduct == null
-                    ? uiT('Quantity')
-                    : uiF('Quantity ({unit})', {'unit': _selectedSaleUnit ?? _selectedProduct!.saleUnit}),
-                border: const OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-              onChanged: (_) => setState(() {}),
-            );
-
-            return compact
-                ? Column(
-                    children: [
-                      priceField,
-                      const SizedBox(height: 12),
-                      quantityField,
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Expanded(child: priceField),
-                      const SizedBox(width: 12),
-                      Expanded(child: quantityField),
-                    ],
-                  );
-          },
-        ),
-
-        const SizedBox(height: 16),
-
-        // ========================================================
-        // ADD ITEM BUTTON
-        // ========================================================
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton.icon(
-            onPressed: _addItem,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blueAccent,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.add_shopping_cart),
-            label: Text(
-              uiT('Add Item to Voucher'),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // ========================================================
-        // ADDED ITEMS
-        // ========================================================
-        if (_items.isNotEmpty) ...[
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            uiT('Added Items:'),
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+            uiT('Voucher Details'),
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
 
-          const SizedBox(height: 8),
-
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _items.length,
-            itemBuilder: (context, index) {
-              final item = _items[index];
-
-              return ListTile(
-                dense: true,
-                title: Text(item.name),
-                subtitle: Text(
-                  'MMK ${item.price} x ${item.qty}${item.saleUnit.isEmpty ? '' : ' ${item.saleUnit}'}',
-                ),
-                trailing: IconButton(
-                  icon: const Icon(
-                    Icons.delete,
-                    color: Colors.red,
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: _selectDate,
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: uiT('Select Date'),
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today_outlined),
+                    ),
+                    child: Text(
+                      _formatDate(_selectedDate),
+                      style: const TextStyle(fontSize: 16),
+                    ),
                   ),
-                  onPressed: () => _removeItem(index),
                 ),
-              );
-            },
-          ),
-
-          const Divider(height: 24),
-
-          // ======================================================
-          // AMOUNT PAID
-          // ======================================================
-          TextField(
-            controller: _paidController,
-            decoration: InputDecoration(
-              labelText: uiT('Amount Paid (MMK)'),
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
-          ),
-
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            initialValue: _paymentMethod,
-            decoration: InputDecoration(
-              labelText: uiT('Payment Method'),
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              DropdownMenuItem(value: 'Cash', child: Text(uiT('Cash'))),
-              DropdownMenuItem(value: 'Bank', child: Text(uiT('Bank'))),
-              DropdownMenuItem(value: 'Mobile', child: Text(uiT('Mobile'))),
-              DropdownMenuItem(value: 'Credit', child: Text(uiT('Credit'))),
+              ),
             ],
-            onChanged: (value) => setState(() => _paymentMethod = value ?? 'Cash'),
-          ),
-
-          const SizedBox(height: 12),
-
-          // ======================================================
-          // GRAND TOTAL
-          // ======================================================
-          Text(
-            uiF('Grand Total: MMK {amount}', {'amount': _grandTotal.toStringAsFixed(2)}),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-
-          // ======================================================
-          // BALANCE
-          // ======================================================
-          Text(
-            uiF('Balance: MMK {amount}', {'amount': (_grandTotal - _paid).toStringAsFixed(2)}),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.red,
-            ),
           ),
 
           const SizedBox(height: 16),
 
-          // ======================================================
-          // ACTION BUTTONS
-          // ======================================================
+          // ========================================================
+          // CUSTOMER DROPDOWN
+          // ========================================================
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _copyVoucherText,
-                  icon: const Icon(Icons.copy_all_outlined),
-                  label: Text(uiT('Copy Details')),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _saveVoucher,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        PosDashboardScreen.primaryGreen,
-                    foregroundColor: Colors.white,
+                child: DropdownButtonFormField<String>(
+                  initialValue: _selectedCustomer,
+                  decoration: InputDecoration(
+                    labelText: uiT('Select Registered Customer'),
+                    border: OutlineInputBorder(),
                   ),
-                  icon: const Icon(Icons.save_outlined),
-                  label: Text(uiT('Save Voucher')),
+                  items: _customers.map((c) {
+                    return DropdownMenuItem<String>(
+                      value: c.name,
+                      child: Text(c.name),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedCustomer = val;
+
+                      if (val != null) {
+                        _nameController.text = val;
+                      }
+                    });
+                  },
                 ),
               ),
             ],
           ),
-        ],
-      ],
-    );
-  }
 
-  // ============================================================
-  // VOUCHER PREVIEW
-  // ============================================================
-  Widget buildVoucherPreview() {
-    return Container(
-      color: Colors.grey[300],
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: VoucherPreviewCard(
-          voucherNumber: AppData.instance.newVoucherNumber(),
-          customerName: _nameController.text,
-          items: _previewItems(),
-          paid: _paid,
-          // Keep the live preview linked to the exact date selected
-          // in the Sale form. This is the same date that will be saved
-          // into Sale.date when the voucher is created.
-          date: _selectedDate,
-        ),
-      ),
-    );
-  }
+          const SizedBox(height: 12),
 
-  // ============================================================
-  // PAGE
-  // ============================================================
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(uiT('Sale Page')),
-    ),
-
-    body: LayoutBuilder(
-      builder: (context, constraints) {
-        // Narrow browser windows now get the same stacked experience as phones.
-        // Keep the split form/preview only when there is enough horizontal room.
-        final isWide = constraints.maxWidth >= 900;
-
-        if (!isWide) {
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: buildForm(),
-                ),
-                const Divider(height: 1, thickness: 1),
-                buildVoucherPreview(),
-              ],
+          // ========================================================
+          // CUSTOMER NAME
+          // ========================================================
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              labelText: uiT('Customer Name (Manual Entry / Selected)'),
+              border: OutlineInputBorder(),
             ),
-          );
-        }
+            onChanged: (_) => setState(() {}),
+          ),
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SingleChildScrollView(
-                  child: buildForm(),
+          const Divider(height: 32),
+
+          // ========================================================
+          // PRODUCT TYPE + SUB TYPE
+          // ========================================================
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 560;
+
+              final typeField = DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: _selectedType,
+                decoration: InputDecoration(
+                  labelText: uiT('Product Type'),
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  DropdownMenuItem<String>(
+                    value: null,
+                    child: Text(
+                      uiT('All Types'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  ..._availableTypes.map(
+                    (t) => DropdownMenuItem<String>(
+                      value: t,
+                      child: Text(t, overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+                ],
+                onChanged: (val) {
+                  setState(() {
+                    _selectedType = val;
+                    _selectedSubType = null;
+                    _selectedProduct = null;
+                    _selectedSaleUnit = null;
+                    _selectedPrice = null;
+                  });
+                },
+              );
+
+              final subTypeField = DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: _selectedSubType,
+                decoration: InputDecoration(
+                  labelText: uiT('Sub Type'),
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  DropdownMenuItem<String>(
+                    value: null,
+                    child: Text(
+                      uiT('All SubTypes'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  ..._availableSubTypes.map(
+                    (st) => DropdownMenuItem<String>(
+                      value: st,
+                      child: Text(st, overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+                ],
+                onChanged: (val) {
+                  setState(() {
+                    _selectedSubType = val;
+                    _selectedProduct = null;
+                    _selectedSaleUnit = null;
+                    _selectedPrice = null;
+                  });
+                },
+              );
+
+              return compact
+                  ? Column(
+                      children: [
+                        typeField,
+                        const SizedBox(height: 12),
+                        subTypeField,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(child: typeField),
+                        const SizedBox(width: 12),
+                        Expanded(child: subTypeField),
+                      ],
+                    );
+            },
+          ),
+
+          const SizedBox(height: 16),
+
+          // ========================================================
+          // PRODUCT DROPDOWN
+          // ========================================================
+          DropdownButtonFormField<Product>(
+            isExpanded: true,
+            initialValue: _selectedProduct,
+            decoration: InputDecoration(
+              labelText: uiT('Select Product'),
+              border: OutlineInputBorder(),
+            ),
+            items: _filteredProducts.map((p) {
+              return DropdownMenuItem<Product>(
+                value: p,
+                child: Text(
+                  '${p.name}${p.subType.isEmpty ? '' : ' • ${p.subType}'} (${_availableStockText(p)})',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: _onProductSelected,
+          ),
+
+          const SizedBox(height: 16),
+
+          if (_selectedProduct != null) ...[
+            const SizedBox(height: 12),
+            if (_selectedProduct!.saleConsumptionMode == 'kg_or_viss')
+              DropdownButtonFormField<String>(
+                initialValue: _selectedSaleUnit,
+                decoration: InputDecoration(
+                  labelText: uiT('Legacy loose-gas sale unit'),
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  DropdownMenuItem(value: 'kg', child: Text(uiT('Kg'))),
+                  DropdownMenuItem(
+                    value: 'viss',
+                    child: Text(uiT('Viss (1 viss = 1.6 kg)')),
+                  ),
+                ],
+                onChanged: (value) => setState(() => _selectedSaleUnit = value),
+              )
+            else
+              InputDecorator(
+                decoration: InputDecoration(
+                  labelText: uiT('Sale unit'),
+                  border: OutlineInputBorder(),
+                ),
+                child: Text(
+                  (_selectedSaleUnit ?? _selectedProduct!.saleUnit).isEmpty
+                      ? uiT('Unit')
+                      : (_selectedSaleUnit ?? _selectedProduct!.saleUnit),
                 ),
               ),
+          ],
+
+          const SizedBox(height: 16),
+
+          // ========================================================
+          // PRICE + QUANTITY
+          // ========================================================
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 560;
+
+              final priceField = DropdownButtonFormField<double>(
+                isExpanded: true,
+                initialValue: _selectedPrice,
+                decoration: InputDecoration(
+                  labelText: uiT('Select Price'),
+                  border: OutlineInputBorder(),
+                ),
+                items: priceItems,
+                onChanged: (val) {
+                  setState(() {
+                    _selectedPrice = val;
+                  });
+                },
+              );
+
+              final quantityField = TextField(
+                controller: _quantityController,
+                decoration: InputDecoration(
+                  labelText: _selectedProduct == null
+                      ? uiT('Quantity')
+                      : uiF('Quantity ({unit})', {
+                          'unit':
+                              _selectedSaleUnit ?? _selectedProduct!.saleUnit,
+                        }),
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+              );
+
+              return compact
+                  ? Column(
+                      children: [
+                        priceField,
+                        const SizedBox(height: 12),
+                        quantityField,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(child: priceField),
+                        const SizedBox(width: 12),
+                        Expanded(child: quantityField),
+                      ],
+                    );
+            },
+          ),
+
+          const SizedBox(height: 16),
+
+          // ========================================================
+          // ADD ITEM BUTTON
+          // ========================================================
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _addItem,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.add_shopping_cart),
+              label: Text(
+                uiT('Add Item to Voucher'),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
-            const VerticalDivider(width: 1),
-            Expanded(
-              child: buildVoucherPreview(),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ========================================================
+          // ADDED ITEMS
+          // ========================================================
+          if (_items.isNotEmpty) ...[
+            Text(
+              uiT('Added Items:'),
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 8),
+
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _items.length,
+              itemBuilder: (context, index) {
+                final item = _items[index];
+
+                return ListTile(
+                  dense: true,
+                  title: Text(item.name),
+                  subtitle: Text(
+                    'MMK ${item.price} x ${item.qty}${item.saleUnit.isEmpty ? '' : ' ${item.saleUnit}'}',
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _removeItem(index),
+                  ),
+                );
+              },
+            ),
+
+            const Divider(height: 24),
+
+            // ======================================================
+            // AMOUNT PAID
+            // ======================================================
+            TextField(
+              controller: _paidController,
+              decoration: InputDecoration(
+                labelText: uiT('Amount Paid (MMK)'),
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+            ),
+
+            const SizedBox(height: 12),
+
+            DropdownButtonFormField<String>(
+              initialValue: _paymentMethod,
+              decoration: InputDecoration(
+                labelText: uiT('Payment Method'),
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                DropdownMenuItem(value: 'Cash', child: Text(uiT('Cash'))),
+                DropdownMenuItem(value: 'Bank', child: Text(uiT('Bank'))),
+                DropdownMenuItem(value: 'Mobile', child: Text(uiT('Mobile'))),
+                DropdownMenuItem(value: 'Credit', child: Text(uiT('Credit'))),
+              ],
+              onChanged: (value) =>
+                  setState(() => _paymentMethod = value ?? 'Cash'),
+            ),
+
+            const SizedBox(height: 12),
+
+            // ======================================================
+            // GRAND TOTAL
+            // ======================================================
+            Text(
+              uiF('Grand Total: MMK {amount}', {
+                'amount': _grandTotal.toStringAsFixed(2),
+              }),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+
+            // ======================================================
+            // BALANCE
+            // ======================================================
+            Text(
+              uiF('Balance: MMK {amount}', {
+                'amount': (_grandTotal - _paid).toStringAsFixed(2),
+              }),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.red,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ======================================================
+            // ACTION BUTTONS
+            // ======================================================
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _copyVoucherText,
+                    icon: const Icon(Icons.copy_all_outlined),
+                    label: Text(uiT('Copy Details')),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _saveVoucher,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: PosDashboardScreen.primaryGreen,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.save_outlined),
+                    label: Text(uiT('Save Voucher')),
+                  ),
+                ),
+              ],
             ),
           ],
-        );
-      },
-    ),
-  );
+        ],
+      );
+    }
+
+    // ============================================================
+    // VOUCHER PREVIEW
+    // ============================================================
+    Widget buildVoucherPreview() {
+      return Container(
+        color: Colors.grey[300],
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: VoucherPreviewCard(
+            voucherNumber: AppData.instance.newVoucherNumber(),
+            customerName: _nameController.text,
+            items: _previewItems(),
+            paid: _paid,
+            // Keep the live preview linked to the exact date selected
+            // in the Sale form. This is the same date that will be saved
+            // into Sale.date when the voucher is created.
+            date: _selectedDate,
+          ),
+        ),
+      );
+    }
+
+    // ============================================================
+    // PAGE
+    // ============================================================
+    return Scaffold(
+      appBar: AppBar(title: Text(uiT('Sale Page'))),
+
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Narrow browser windows now get the same stacked experience as phones.
+          // Keep the split form/preview only when there is enough horizontal room.
+          final isWide = constraints.maxWidth >= 900;
+
+          if (!isWide) {
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: buildForm(),
+                  ),
+                  const Divider(height: 1, thickness: 1),
+                  buildVoucherPreview(),
+                ],
+              ),
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: SingleChildScrollView(child: buildForm()),
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(child: buildVoucherPreview()),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -9179,12 +10451,10 @@ class VoucherPreviewCard extends StatelessWidget {
   final double paid;
   final DateTime date;
 
-  double get _total =>
-      items.fold(0.0, (sum, i) => sum + i.amount);
+  double get _total => items.fold(0.0, (sum, i) => sum + i.amount);
 
   String get _qrData {
-    final name =
-        customerName.isEmpty ? 'Customer' : customerName;
+    final name = customerName.isEmpty ? 'Customer' : customerName;
 
     if (items.isEmpty) {
       return 'Kyal Sin Lay Energy | '
@@ -9193,9 +10463,7 @@ class VoucherPreviewCard extends StatelessWidget {
           'Total: MMK ${_total.toStringAsFixed(2)}';
     }
 
-    final itemDetails = items
-        .map((i) => '${i.name} (x${i.qty})')
-        .join(', ');
+    final itemDetails = items.map((i) => '${i.name} (x${i.qty})').join(', ');
 
     return 'Kyal Sin Lay Energy | '
         'Voucher: $voucherNumber | '
@@ -9237,7 +10505,6 @@ class VoucherPreviewCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-
                   // ==================================================
                   // STORE NAME
                   // ==================================================
@@ -9260,10 +10527,7 @@ class VoucherPreviewCard extends StatelessWidget {
                   Text(
                     'ဖုန်း - 09-401615090, 09-681617010',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                   ),
 
                   // ==================================================
@@ -9272,10 +10536,7 @@ class VoucherPreviewCard extends StatelessWidget {
                   Text(
                     'လိပ်စာ (1) - ကျန်းစစ်သားလမ်းနှင့် ပုလဲလမ်းထောင့် | ငပလီမြို့ | သံတွဲမြို့နယ် | ရခိုင်ပြည်နယ်',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                   ),
 
                   // ==================================================
@@ -9284,10 +10545,7 @@ class VoucherPreviewCard extends StatelessWidget {
                   Text(
                     'လိပ်စာ (2) - တွံတေးမြို့နယ် | ရန်ကုန်တိုင်းဒေသကြီး',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                   ),
 
                   // ==================================================
@@ -9296,17 +10554,12 @@ class VoucherPreviewCard extends StatelessWidget {
                   Text(
                     'လိပ်စာ (3) - တူးချောင်းရပ်ကွက် | ထန်းတပင်မြို့နယ် | ရန်ကုန်တိုင်းဒေသကြီး',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                   ),
 
                   const SizedBox(height: 6),
 
-                  const Divider(
-                    thickness: 1,
-                  ),
+                  const Divider(thickness: 1),
 
                   // ==================================================
                   // VOUCHER TITLE
@@ -9359,10 +10612,7 @@ class VoucherPreviewCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'Date: ${_formatDateOnly(date)}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -9373,10 +10623,7 @@ class VoucherPreviewCard extends StatelessWidget {
                   // PRODUCT TABLE
                   // ==================================================
                   Table(
-                    border: TableBorder.all(
-                      color: Colors.black,
-                      width: 0.8,
-                    ),
+                    border: TableBorder.all(color: Colors.black, width: 0.8),
 
                     columnWidths: const {
                       0: FlexColumnWidth(0.8),
@@ -9391,9 +10638,7 @@ class VoucherPreviewCard extends StatelessWidget {
                       // TABLE HEADER
                       // --------------------------------------------
                       TableRow(
-                        decoration: const BoxDecoration(
-                          color: Colors.black12,
-                        ),
+                        decoration: const BoxDecoration(color: Colors.black12),
                         children: [
                           Padding(
                             padding: const EdgeInsets.all(4.0),
@@ -9471,9 +10716,7 @@ class VoucherPreviewCard extends StatelessWidget {
                               child: Text(
                                 '${idx + 1}',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                ),
+                                style: const TextStyle(fontSize: 10),
                               ),
                             ),
 
@@ -9481,9 +10724,7 @@ class VoucherPreviewCard extends StatelessWidget {
                               padding: const EdgeInsets.all(4.0),
                               child: Text(
                                 item.name,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                ),
+                                style: const TextStyle(fontSize: 10),
                               ),
                             ),
 
@@ -9492,9 +10733,7 @@ class VoucherPreviewCard extends StatelessWidget {
                               child: Text(
                                 item.price.toStringAsFixed(2),
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                ),
+                                style: const TextStyle(fontSize: 10),
                               ),
                             ),
 
@@ -9503,9 +10742,7 @@ class VoucherPreviewCard extends StatelessWidget {
                               child: Text(
                                 item.qty.toString(),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                ),
+                                style: const TextStyle(fontSize: 10),
                               ),
                             ),
 
@@ -9514,9 +10751,7 @@ class VoucherPreviewCard extends StatelessWidget {
                               child: Text(
                                 item.amount.toStringAsFixed(2),
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                ),
+                                style: const TextStyle(fontSize: 10),
                               ),
                             ),
                           ],
@@ -9533,10 +10768,7 @@ class VoucherPreviewCard extends StatelessWidget {
                             children: [
                               Padding(
                                 padding: EdgeInsets.all(4.0),
-                                child: Text(
-                                  '',
-                                  style: TextStyle(fontSize: 10),
-                                ),
+                                child: Text('', style: TextStyle(fontSize: 10)),
                               ),
                               Padding(
                                 padding: EdgeInsets.all(4.0),
@@ -9565,10 +10797,7 @@ class VoucherPreviewCard extends StatelessWidget {
                   // TOTALS TABLE
                   // ==================================================
                   Table(
-                    border: TableBorder.all(
-                      color: Colors.black,
-                      width: 0.8,
-                    ),
+                    border: TableBorder.all(color: Colors.black, width: 0.8),
 
                     columnWidths: const {
                       0: FlexColumnWidth(2.0),
@@ -9678,10 +10907,8 @@ class VoucherPreviewCard extends StatelessWidget {
                   const Spacer(),
 
                   Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment:
-                        CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       // CUSTOMER SIGN
                       Column(
@@ -9689,17 +10916,9 @@ class VoucherPreviewCard extends StatelessWidget {
                         children: [
                           SizedBox(
                             width: 80,
-                            child: Divider(
-                              color: Colors.black,
-                              thickness: 1,
-                            ),
+                            child: Divider(color: Colors.black, thickness: 1),
                           ),
-                          Text(
-                            'Customer Sign',
-                            style: TextStyle(
-                              fontSize: 11,
-                            ),
-                          ),
+                          Text('Customer Sign', style: TextStyle(fontSize: 11)),
                         ],
                       ),
 
@@ -9708,16 +10927,17 @@ class VoucherPreviewCard extends StatelessWidget {
                       Expanded(
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            final availableWidth =
-                                constraints.maxWidth.isFinite
-                                    ? constraints.maxWidth
-                                    : 100.0;
-                            final baseSize =
-                                availableWidth.clamp(64.0, 96.0).toDouble();
+                            final availableWidth = constraints.maxWidth.isFinite
+                                ? constraints.maxWidth
+                                : 100.0;
+                            final baseSize = availableWidth
+                                .clamp(64.0, 96.0)
+                                .toDouble();
                             final itemReduction =
                                 ((items.length - 1).clamp(0, 6) * 5.0);
-                            final qrSize =
-                                (baseSize - itemReduction).clamp(56.0, 96.0).toDouble();
+                            final qrSize = (baseSize - itemReduction)
+                                .clamp(56.0, 96.0)
+                                .toDouble();
 
                             return Center(
                               child: QrImageView(
@@ -9738,17 +10958,9 @@ class VoucherPreviewCard extends StatelessWidget {
                         children: [
                           SizedBox(
                             width: 80,
-                            child: Divider(
-                              color: Colors.black,
-                              thickness: 1,
-                            ),
+                            child: Divider(color: Colors.black, thickness: 1),
                           ),
-                          Text(
-                            'Seller Sign',
-                            style: TextStyle(
-                              fontSize: 11,
-                            ),
-                          ),
+                          Text('Seller Sign', style: TextStyle(fontSize: 11)),
                         ],
                       ),
                     ],
@@ -9766,7 +10978,8 @@ class VoucherPreviewCard extends StatelessWidget {
 class VouchersPage extends StatefulWidget {
   const VouchersPage({super.key, required this.title});
   final String title;
-  @override State<VouchersPage> createState() => _VouchersPageState();
+  @override
+  State<VouchersPage> createState() => _VouchersPageState();
 }
 
 class _VouchersPageState extends State<VouchersPage> {
@@ -9776,7 +10989,8 @@ class _VouchersPageState extends State<VouchersPage> {
   DateTimeRange? _dateRange;
   RangeValues? _amountRange;
 
-  bool get _hasFilters => _query.trim().isNotEmpty || _dateRange != null || _amountRange != null;
+  bool get _hasFilters =>
+      _query.trim().isNotEmpty || _dateRange != null || _amountRange != null;
 
   @override
   void dispose() {
@@ -9801,7 +11015,8 @@ class _VouchersPageState extends State<VouchersPage> {
       initialDateRange: _dateRange,
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: PosDashboardScreen.primaryGreen),
+          colorScheme: Theme.of(ctx).colorScheme
+              .copyWith(primary: PosDashboardScreen.primaryGreen),
         ),
         child: child!,
       ),
@@ -9810,40 +11025,68 @@ class _VouchersPageState extends State<VouchersPage> {
   }
 
   Widget _amountBox(String label, double value) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(color: const Color(0xFFF2F4F3), borderRadius: BorderRadius.circular(14)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-            const SizedBox(height: 2),
-            Text(value.toStringAsFixed(2), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          ],
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF2F4F3),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.black54),
         ),
-      );
+        const SizedBox(height: 2),
+        Text(
+          value.toStringAsFixed(2),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+      ],
+    ),
+  );
 
   Future<void> _pickAmountRange(double maxAmount) async {
     const green = PosDashboardScreen.primaryGreen;
     final top = maxAmount <= 0 ? 1.0 : maxAmount.ceilToDouble();
     var values = _amountRange == null
         ? RangeValues(0, top)
-        : RangeValues(_amountRange!.start.clamp(0.0, top).toDouble(), _amountRange!.end.clamp(0.0, top).toDouble());
+        : RangeValues(
+            _amountRange!.start.clamp(0.0, top).toDouble(),
+            _amountRange!.end.clamp(0.0, top).toDouble(),
+          );
     final result = await showModalBottomSheet<Object?>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (sheetContext) => StatefulBuilder(
         builder: (sheetContext, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 4, 24, 24 + MediaQuery.of(sheetContext).viewInsets.bottom),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            4,
+            24,
+            24 + MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(uiT('Amount'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              Text(
+                uiT('Amount'),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(uiT('Show vouchers with a total between'), style: const TextStyle(color: Colors.black54)),
+              Text(
+                uiT('Show vouchers with a total between'),
+                style: const TextStyle(color: Colors.black54),
+              ),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -9878,7 +11121,9 @@ class _VouchersPageState extends State<VouchersPage> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                       onPressed: () => Navigator.pop(sheetContext, false),
                       child: Text(uiT('Reset')),
@@ -9891,7 +11136,9 @@ class _VouchersPageState extends State<VouchersPage> {
                       style: FilledButton.styleFrom(
                         backgroundColor: green,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                       onPressed: () => Navigator.pop(sheetContext, values),
                       child: Text(uiT('Apply')),
@@ -9923,12 +11170,19 @@ class _VouchersPageState extends State<VouchersPage> {
     const green = PosDashboardScreen.primaryGreen;
     return Material(
       color: active ? green.withValues(alpha: .10) : Colors.white,
-      shape: StadiumBorder(side: BorderSide(color: active ? green : const Color(0xFFD9DEDC))),
+      shape: StadiumBorder(
+        side: BorderSide(color: active ? green : const Color(0xFFD9DEDC)),
+      ),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(12, 8, active && onClear != null ? 6 : 14, 8),
+          padding: EdgeInsets.fromLTRB(
+            12,
+            8,
+            active && onClear != null ? 6 : 14,
+            8,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -9936,7 +11190,11 @@ class _VouchersPageState extends State<VouchersPage> {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: active ? green : Colors.black87),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: active ? green : Colors.black87,
+                ),
               ),
               if (active && onClear != null) ...[
                 const SizedBox(width: 2),
@@ -9965,9 +11223,9 @@ class _VouchersPageState extends State<VouchersPage> {
         ? uiT('Amount')
         : '${_amountRange!.start.toStringAsFixed(0)} – ${_amountRange!.end.toStringAsFixed(0)}';
     OutlineInputBorder border(Color c, [double w = 0]) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w),
-        );
+      borderRadius: BorderRadius.circular(16),
+      borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w),
+    );
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
@@ -10033,7 +11291,10 @@ class _VouchersPageState extends State<VouchersPage> {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                uiF('{shown} of {total} vouchers', {'shown': shown.toString(), 'total': total.toString()}),
+                uiF('{shown} of {total} vouchers', {
+                  'shown': shown.toString(),
+                  'total': total.toString(),
+                }),
                 style: const TextStyle(fontSize: 12, color: Colors.black54),
               ),
             ),
@@ -10043,86 +11304,219 @@ class _VouchersPageState extends State<VouchersPage> {
   }
 
   Widget _buildNoMatches() => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.search_off_rounded, size: 56, color: Colors.black26),
-              const SizedBox(height: 12),
-              Text(uiT('No vouchers match your filters'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 12),
-              OutlinedButton(onPressed: _clearFilters, child: Text(uiT('Clear filters'))),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off_rounded, size: 56, color: Colors.black26),
+          const SizedBox(height: 12),
+          Text(
+            uiT('No vouchers match your filters'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-        ),
-      );
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: _clearFilters,
+            child: Text(uiT('Clear filters')),
+          ),
+        ],
+      ),
+    ),
+  );
 
   void _openVoucher(Voucher v) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => VoucherDetailPage(voucher: v)));
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => VoucherDetailPage(voucher: v)),
+    );
     if (mounted) setState(() {});
   }
 
   Future<void> _confirmDelete(Voucher v) async {
     final security = SecurityManager.instance;
-    final approved = security.can(PosPermission.saleDelete) || await security.requireApproval(context, permission: PosPermission.saleDelete, action: 'Deleting voucher ${v.id}');
+    final approved =
+        security.can(PosPermission.saleDelete) ||
+        await security.requireApproval(
+          context,
+          permission: PosPermission.saleDelete,
+          action: 'Deleting voucher ${v.id}',
+        );
     if (!approved || !mounted) return;
-    showDialog(context: context, builder: (dialogContext) => AlertDialog(
-      title: Text(uiT('Delete voucher?')),
-      content: Text(uiF('Delete the voucher for "{customer}"? Stock sold on this voucher will be returned.', {'customer': v.customerName.isEmpty ? uiT('Customer') : v.customerName})),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(uiT('Cancel'))), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () async { await AppData.instance.deleteVoucher(v.id, approved: !security.can(PosPermission.saleDelete)); if (dialogContext.mounted) Navigator.pop(dialogContext); if (mounted) setState(() {}); }, child: Text(uiT('Delete')))],
-    ));
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(uiT('Delete voucher?')),
+        content: Text(
+          uiF(
+            'Delete the voucher for "{customer}"? Stock sold on this voucher will be returned.',
+            {
+              'customer': v.customerName.isEmpty
+                  ? uiT('Customer')
+                  : v.customerName,
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(uiT('Cancel')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              await AppData.instance.deleteVoucher(
+                v.id,
+                approved: !security.can(PosPermission.saleDelete),
+              );
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (mounted) setState(() {});
+            },
+            child: Text(uiT('Delete')),
+          ),
+        ],
+      ),
+    );
   }
 
-  @override Widget build(BuildContext context) {
-    final allVouchers = List<Voucher>.from(AppData.instance.vouchers)..sort((a,b) => b.date.compareTo(a.date));
-    final maxAmount = allVouchers.fold<double>(0, (m, v) { final t = AppData.instance.totalForSale(v.voucherNumber); return t > m ? t : m; });
+  @override
+  Widget build(BuildContext context) {
+    final allVouchers = List<Voucher>.from(AppData.instance.vouchers)
+      ..sort((a, b) => b.date.compareTo(a.date));
+    final maxAmount = allVouchers.fold<double>(0, (m, v) {
+      final t = AppData.instance.totalForSale(v.voucherNumber);
+      return t > m ? t : m;
+    });
     final q = _query.trim().toLowerCase();
     final vouchers = allVouchers.where((v) {
-      if (q.isNotEmpty && !v.customerName.toLowerCase().contains(q)) return false;
+      if (q.isNotEmpty && !v.customerName.toLowerCase().contains(q))
+        return false;
       if (_dateRange != null) {
         final d = DateTime(v.date.year, v.date.month, v.date.day);
-        final from = DateTime(_dateRange!.start.year, _dateRange!.start.month, _dateRange!.start.day);
-        final to = DateTime(_dateRange!.end.year, _dateRange!.end.month, _dateRange!.end.day);
+        final from = DateTime(
+          _dateRange!.start.year,
+          _dateRange!.start.month,
+          _dateRange!.start.day,
+        );
+        final to = DateTime(
+          _dateRange!.end.year,
+          _dateRange!.end.month,
+          _dateRange!.end.day,
+        );
         if (d.isBefore(from) || d.isAfter(to)) return false;
       }
       if (_amountRange != null) {
         final t = AppData.instance.totalForSale(v.voucherNumber);
-        if (t < _amountRange!.start - .005 || t > _amountRange!.end + .005) return false;
+        if (t < _amountRange!.start - .005 || t > _amountRange!.end + .005)
+          return false;
       }
       return true;
     }).toList();
     return Scaffold(
-      appBar: AppBar(title: Text(uiT(widget.title)), backgroundColor: PosDashboardScreen.primaryGreen, foregroundColor: Colors.white),
-      body: allVouchers.isEmpty ? Center(child: Text(uiT('No vouchers saved yet. Create one from the Sale page.'))) : Column(children: [
-        _buildFilterBar(vouchers.length, allVouchers.length, maxAmount),
-        const Divider(height: 1),
-        Expanded(child: vouchers.isEmpty ? _buildNoMatches() : ListView.separated(
-        padding: const EdgeInsets.all(12), itemCount: vouchers.length, separatorBuilder: (_, _) => const Divider(height: 1),
-        itemBuilder: (context,index) {
-          final v=vouchers[index]; final total=AppData.instance.totalForSale(v.voucherNumber); final paidAmount=AppData.instance.paidForSale(v.voucherNumber); final balance=(total-paidAmount).clamp(0,double.infinity).toDouble(); final paid=paidAmount>0 && balance>0.005; final settled=balance<=.005;
-          final status=settled?'PAID':paid?'PARTIALLY PAID':'UNPAID';
-          final statusColor=settled?Colors.green:paid?Colors.orange:Colors.red;
-          return ListTile(
-            leading: Icon(Icons.confirmation_number_outlined, color: PosDashboardScreen.primaryGreen),
-            title: Text('${v.voucherNumber} • ${v.customerName.isEmpty ? uiT('Customer') : v.customerName}'),
-            subtitle: Text(uiF('{date} • {count} item(s) • {status}', {'date': _formatDateOnly(v.date), 'count': AppData.instance.itemsForSale(v.voucherNumber).length.toString(), 'status': uiT(status)})),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+      appBar: AppBar(
+        title: Text(uiT(widget.title)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
+      ),
+      body: allVouchers.isEmpty
+          ? Center(
+              child: Text(
+                uiT('No vouchers saved yet. Create one from the Sale page.'),
+              ),
+            )
+          : Column(
               children: [
-                Column(mainAxisAlignment: MainAxisAlignment.center,crossAxisAlignment: CrossAxisAlignment.end,children:[Text(total.toStringAsFixed(2),style:const TextStyle(fontWeight:FontWeight.bold)),Text(uiF('Balance {balance}', {'balance': balance.toStringAsFixed(2)}),style:TextStyle(fontSize:11,color:statusColor))]),
-                IconButton(
-                  tooltip: uiT('Delete voucher'),
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () => _confirmDelete(v),
+                _buildFilterBar(vouchers.length, allVouchers.length, maxAmount),
+                const Divider(height: 1),
+                Expanded(
+                  child: vouchers.isEmpty
+                      ? _buildNoMatches()
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: vouchers.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final v = vouchers[index];
+                            final total = AppData.instance.totalForSale(
+                              v.voucherNumber,
+                            );
+                            final paidAmount = AppData.instance.paidForSale(
+                              v.voucherNumber,
+                            );
+                            final balance = (total - paidAmount)
+                                .clamp(0, double.infinity)
+                                .toDouble();
+                            final paid = paidAmount > 0 && balance > 0.005;
+                            final settled = balance <= .005;
+                            final status = settled
+                                ? 'PAID'
+                                : paid
+                                ? 'PARTIALLY PAID'
+                                : 'UNPAID';
+                            final statusColor = settled
+                                ? Colors.green
+                                : paid
+                                ? Colors.orange
+                                : Colors.red;
+                            return ListTile(
+                              leading: Icon(
+                                Icons.confirmation_number_outlined,
+                                color: PosDashboardScreen.primaryGreen,
+                              ),
+                              title: Text(
+                                '${v.voucherNumber} • ${v.customerName.isEmpty ? uiT('Customer') : v.customerName}',
+                              ),
+                              subtitle: Text(
+                                uiF('{date} • {count} item(s) • {status}', {
+                                  'date': _formatDateOnly(v.date),
+                                  'count': AppData.instance
+                                      .itemsForSale(v.voucherNumber)
+                                      .length
+                                      .toString(),
+                                  'status': uiT(status),
+                                }),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        total.toStringAsFixed(2),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        uiF('Balance {balance}', {
+                                          'balance': balance.toStringAsFixed(2),
+                                        }),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: statusColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  IconButton(
+                                    tooltip: uiT('Delete voucher'),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () => _confirmDelete(v),
+                                  ),
+                                ],
+                              ),
+                              onTap: () => _openVoucher(v),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
-            onTap: () => _openVoucher(v),
-          );
-        },
-      )),
-      ]),
     );
   }
 }
@@ -10130,7 +11524,8 @@ class _VouchersPageState extends State<VouchersPage> {
 class VoucherDetailPage extends StatefulWidget {
   const VoucherDetailPage({super.key, required this.voucher});
   final Voucher voucher;
-  @override State<VoucherDetailPage> createState() => _VoucherDetailPageState();
+  @override
+  State<VoucherDetailPage> createState() => _VoucherDetailPageState();
 }
 
 class _VoucherDetailPageState extends State<VoucherDetailPage> {
@@ -10141,8 +11536,9 @@ class _VoucherDetailPageState extends State<VoucherDetailPage> {
     try {
       // Let any pending frame finish rendering before we capture it.
       await WidgetsBinding.instance.endOfFrame;
-      final boundary = _voucherCaptureKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _voucherCaptureKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return null;
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -10186,7 +11582,11 @@ class _VoucherDetailPageState extends State<VoucherDetailPage> {
         if (mounted && uri != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(uiT("Sharing isn't supported on this device — the voucher image was saved instead.")),
+              content: Text(
+                uiT(
+                  "Sharing isn't supported on this device — the voucher image was saved instead.",
+                ),
+              ),
               duration: Duration(seconds: 4),
             ),
           );
@@ -10194,9 +11594,8 @@ class _VoucherDetailPageState extends State<VoucherDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(uiError(e))));
       }
     } finally {
       if (mounted) setState(() => _capturingImage = false);
@@ -10249,9 +11648,8 @@ class _VoucherDetailPageState extends State<VoucherDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(uiError(e))));
       }
     } finally {
       if (mounted) setState(() => _capturingImage = false);
@@ -10260,54 +11658,268 @@ class _VoucherDetailPageState extends State<VoucherDetailPage> {
 
   Future<void> _editVoucher() async {
     final customer = TextEditingController(text: widget.voucher.customer);
-    final currentPaid = AppData.instance.paidForSale(widget.voucher.voucherNumber);
+    final currentPaid = AppData.instance.paidForSale(
+      widget.voucher.voucherNumber,
+    );
     final paid = TextEditingController(text: currentPaid.toStringAsFixed(2));
     final allowedMethods = {'Cash', 'Bank', 'Mobile', 'Credit'};
-    String method = allowedMethods.contains(widget.voucher.paymentMethod) ? widget.voucher.paymentMethod : 'Cash';
+    String method = allowedMethods.contains(widget.voucher.paymentMethod)
+        ? widget.voucher.paymentMethod
+        : 'Cash';
     DateTime date = widget.voucher.date;
     final total = AppData.instance.totalForSale(widget.voucher.voucherNumber);
-    await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx,setDialogState) => AlertDialog(
-      title: Text(uiT('Edit voucher')), content: SingleChildScrollView(child: Column(mainAxisSize:MainAxisSize.min,children:[
-        TextField(controller: customer, decoration: InputDecoration(labelText:uiT('Customer'))),
-        const SizedBox(height:10),
-        TextField(controller: paid, keyboardType:TextInputType.number, decoration:InputDecoration(labelText:uiF('Amount paid (total {amount})', {'amount': total.toStringAsFixed(2)}))),
-        const SizedBox(height:10),
-        DropdownButtonFormField<String>(initialValue: method.isEmpty?null:method, decoration:InputDecoration(labelText:uiT('Payment method')), items:[DropdownMenuItem(value:'Cash',child:Text(uiT('Cash'))),DropdownMenuItem(value:'Bank',child:Text(uiT('Bank'))),DropdownMenuItem(value:'Mobile',child:Text(uiT('Mobile'))),DropdownMenuItem(value:'Credit',child:Text(uiT('Credit')))], onChanged:(v)=>setDialogState(()=>method=v??'')),
-        const SizedBox(height:10),
-        OutlinedButton.icon(onPressed:() async { final picked=await showDatePicker(context:ctx,initialDate:date,firstDate:DateTime(2000),lastDate:DateTime(2100)); if(picked!=null)setDialogState(()=>date=picked); }, icon:const Icon(Icons.calendar_today), label:Text(uiF('Date {date}', {'date': _formatDateOnly(date)}))),
-      ])), actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(uiT('Cancel'))),ElevatedButton(onPressed:() async { final amount=double.tryParse(paid.text.trim())??0; await AppData.instance.updateSalePayment(widget.voucher.voucherNumber, paid:amount, paymentMethod:method, date:date, customer:customer.text.trim(), paymentDate: amount != currentPaid ? DateTime.now() : widget.voucher.paymentDate); if(ctx.mounted)Navigator.pop(ctx); if(mounted)setState((){}); },child:Text(uiT('Save')))],
-    )));
-    customer.dispose(); paid.dispose();
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(uiT('Edit voucher')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: customer,
+                  decoration: InputDecoration(labelText: uiT('Customer')),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: paid,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: uiF('Amount paid (total {amount})', {
+                      'amount': total.toStringAsFixed(2),
+                    }),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: method.isEmpty ? null : method,
+                  decoration: InputDecoration(labelText: uiT('Payment method')),
+                  items: [
+                    DropdownMenuItem(value: 'Cash', child: Text(uiT('Cash'))),
+                    DropdownMenuItem(value: 'Bank', child: Text(uiT('Bank'))),
+                    DropdownMenuItem(
+                      value: 'Mobile',
+                      child: Text(uiT('Mobile')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Credit',
+                      child: Text(uiT('Credit')),
+                    ),
+                  ],
+                  onChanged: (v) => setDialogState(() => method = v ?? ''),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: date,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) setDialogState(() => date = picked);
+                  },
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    uiF('Date {date}', {'date': _formatDateOnly(date)}),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(uiT('Cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final amount = double.tryParse(paid.text.trim()) ?? 0;
+                await AppData.instance.updateSalePayment(
+                  widget.voucher.voucherNumber,
+                  paid: amount,
+                  paymentMethod: method,
+                  date: date,
+                  customer: customer.text.trim(),
+                  paymentDate: amount != currentPaid
+                      ? DateTime.now()
+                      : widget.voucher.paymentDate,
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) setState(() {});
+              },
+              child: Text(uiT('Save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    customer.dispose();
+    paid.dispose();
   }
 
-  @override Widget build(BuildContext context) {
-    final total=AppData.instance.totalForSale(widget.voucher.voucherNumber); final paidAmount=AppData.instance.paidForSale(widget.voucher.voucherNumber); final balance=(total-paidAmount).clamp(0,double.infinity).toDouble(); final status=balance<=.005?'PAID':paidAmount>0?'PARTIALLY PAID':'UNPAID'; final payments=AppData.instance.paymentsForSale(widget.voucher.voucherNumber);
-    return Scaffold(appBar:AppBar(title:Text(uiT('Voucher')),backgroundColor:PosDashboardScreen.primaryGreen,foregroundColor:Colors.white,actions:[
-      IconButton(onPressed:_editVoucher,icon:const Icon(Icons.edit_outlined),tooltip:uiT('Edit voucher')),
-      IconButton(
-        onPressed: _capturingImage ? null : _shareVoucherImage,
-        tooltip: uiT('Share as image'),
-        icon: _capturingImage
-            ? const SizedBox(width:20,height:20,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white))
-            : const Icon(Icons.share_outlined),
+  @override
+  Widget build(BuildContext context) {
+    final total = AppData.instance.totalForSale(widget.voucher.voucherNumber);
+    final paidAmount = AppData.instance.paidForSale(
+      widget.voucher.voucherNumber,
+    );
+    final balance = (total - paidAmount).clamp(0, double.infinity).toDouble();
+    final status = balance <= .005
+        ? 'PAID'
+        : paidAmount > 0
+        ? 'PARTIALLY PAID'
+        : 'UNPAID';
+    final payments = AppData.instance.paymentsForSale(
+      widget.voucher.voucherNumber,
+    );
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(uiT('Voucher')),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
+        actions: [
+          IconButton(
+            onPressed: _editVoucher,
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: uiT('Edit voucher'),
+          ),
+          IconButton(
+            onPressed: _capturingImage ? null : _shareVoucherImage,
+            tooltip: uiT('Share as image'),
+            icon: _capturingImage
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.share_outlined),
+          ),
+          IconButton(
+            onPressed: _capturingImage ? null : _saveVoucherImage,
+            tooltip: uiT('Save as photo'),
+            icon: const Icon(Icons.download_outlined),
+          ),
+        ],
       ),
-      IconButton(
-        onPressed: _capturingImage ? null : _saveVoucherImage,
-        tooltip: uiT('Save as photo'),
-        icon: const Icon(Icons.download_outlined),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Text(
+                  uiT(status),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: status == 'PAID'
+                        ? Colors.green
+                        : status == 'UNPAID'
+                        ? Colors.red
+                        : Colors.orange,
+                  ),
+                ),
+                Text(
+                  uiF('Paid {paid}', {'paid': paidAmount.toStringAsFixed(2)}),
+                ),
+                Text(
+                  uiF('Balance {balance}', {
+                    'balance': balance.toStringAsFixed(2),
+                  }),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 380),
+                        child: RepaintBoundary(
+                          key: _voucherCaptureKey,
+                          child: VoucherPreviewCard(
+                            voucherNumber: widget.voucher.voucherNumber,
+                            customerName: widget.voucher.customerName,
+                            items: AppData.instance.itemsForSale(
+                              widget.voucher.voucherNumber,
+                            ),
+                            paid: paidAmount,
+                            date: widget.voucher.date,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              uiT('Payment History'),
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (payments.isEmpty)
+                              Text(uiT('No payment transactions recorded.'))
+                            else
+                              ...payments.map(
+                                (p) => ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  leading: Icon(
+                                    p.amount >= 0
+                                        ? Icons.arrow_downward
+                                        : Icons.undo,
+                                    color: p.amount >= 0
+                                        ? Colors.teal
+                                        : Colors.orange,
+                                  ),
+                                  title: Text(
+                                    uiF('{label} {amount}', {
+                                      'label': p.amount >= 0
+                                          ? uiT('Received')
+                                          : uiT('Adjustment'),
+                                      'amount': p.amount.abs().toStringAsFixed(
+                                        2,
+                                      ),
+                                    }),
+                                  ),
+                                  subtitle: Text(
+                                    '${_formatDateOnly(p.date)}${p.method.isNotEmpty ? ' • ${uiT(p.method)}' : ''}${p.note.isNotEmpty ? ' • ${uiLedgerNote(p.note)}' : ''}',
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
-    ]), body:Column(children:[
-      Container(width:double.infinity,padding:const EdgeInsets.all(12),child:Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[Text(uiT(status),style:TextStyle(fontWeight:FontWeight.bold,color:status=='PAID'?Colors.green:status=='UNPAID'?Colors.red:Colors.orange)),Text(uiF('Paid {paid}', {'paid': paidAmount.toStringAsFixed(2)})),Text(uiF('Balance {balance}', {'balance': balance.toStringAsFixed(2)})) ])),
-      Expanded(child:SingleChildScrollView(child:Column(children:[
-        Padding(padding:const EdgeInsets.all(16),child:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:380),child:RepaintBoundary(key:_voucherCaptureKey,child:VoucherPreviewCard(voucherNumber:widget.voucher.voucherNumber,customerName:widget.voucher.customerName,items:AppData.instance.itemsForSale(widget.voucher.voucherNumber),paid:paidAmount,date:widget.voucher.date))))),
-        Container(width:double.infinity,constraints:const BoxConstraints(maxWidth:520),padding:const EdgeInsets.fromLTRB(16,0,16,24),child:Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text(uiT('Payment History'),style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
-          const SizedBox(height:8),
-          if(payments.isEmpty) Text(uiT('No payment transactions recorded.'))
-          else ...payments.map((p)=>ListTile(contentPadding:EdgeInsets.zero,dense:true,leading:Icon(p.amount>=0?Icons.arrow_downward:Icons.undo,color:p.amount>=0?Colors.teal:Colors.orange),title:Text(uiF('{label} {amount}', {'label': p.amount>=0 ? uiT('Received') : uiT('Adjustment'), 'amount': p.amount.abs().toStringAsFixed(2)})),subtitle:Text('${_formatDateOnly(p.date)}${p.method.isNotEmpty?' • ${uiT(p.method)}':''}${p.note.isNotEmpty?' • ${uiLedgerNote(p.note)}':''}')))
-        ])))),
-      ]))),
-    ]));
+    );
   }
 }
 
@@ -10326,7 +11938,9 @@ class CylinderTypesPage extends StatefulWidget {
 
 class _CylinderTypesPageState extends State<CylinderTypesPage> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _totalController = TextEditingController(text: '0');
+  final TextEditingController _totalController = TextEditingController(
+    text: '0',
+  );
   String _baseType = '48kg';
 
   @override
@@ -10372,13 +11986,14 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
       _totalController.text = '0';
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiF('Cylinder type "{name}" added.', {'name': name}))),
+        SnackBar(
+          content: Text(uiF('Cylinder type "{name}" added.', {'name': name})),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiError(e))));
     }
   }
 
@@ -10408,7 +12023,8 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
           ElevatedButton(
             onPressed: () {
               final quantity = double.tryParse(controller.text.trim());
-              if (quantity == null || !quantity.isFinite || quantity < 0) return;
+              if (quantity == null || !quantity.isFinite || quantity < 0)
+                return;
               Navigator.pop(dialogContext, quantity);
             },
             child: Text(uiT('Save')),
@@ -10424,9 +12040,8 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
       if (mounted) setState(() {});
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiError(e))));
     }
   }
 
@@ -10436,7 +12051,10 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
       builder: (dialogContext) => AlertDialog(
         title: Text(uiT('Delete cylinder type?')),
         content: Text(
-          uiF('Delete "{name}"? Existing cylinder-cycle records will not be deleted.', {'name': type.name}),
+          uiF(
+            'Delete "{name}"? Existing cylinder-cycle records will not be deleted.',
+            {'name': type.name},
+          ),
         ),
         actions: [
           TextButton(
@@ -10458,9 +12076,8 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
       if (mounted) setState(() {});
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiError(e))));
     }
   }
 
@@ -10476,8 +12093,8 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: PosDashboardScreen.primaryGreen,
@@ -10507,7 +12124,10 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
                       border: OutlineInputBorder(),
                     ),
                     items: [
-                      DropdownMenuItem(value: '48kg', child: Text(uiT('48 kg'))),
+                      DropdownMenuItem(
+                        value: '48kg',
+                        child: Text(uiT('48 kg')),
+                      ),
                       DropdownMenuItem(value: '10v', child: Text(uiT('10v'))),
                     ],
                     onChanged: (value) =>
@@ -10531,7 +12151,9 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
                     ),
                     decoration: InputDecoration(
                       labelText: uiT('Opening cylinder stock'),
-                      helperText: uiT('Enter the cylinders you currently have. This is the stock starting balance.'),
+                      helperText: uiT(
+                        'Enter the cylinders you currently have. This is the stock starting balance.',
+                      ),
                       suffixText: _categoryLabel(_baseType),
                       border: const OutlineInputBorder(),
                     ),
@@ -10585,7 +12207,10 @@ class _CylinderTypesPageState extends State<CylinderTypesPage> {
                       ),
                       IconButton(
                         tooltip: uiT('Delete'),
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
                         onPressed: () => _deleteType(type),
                       ),
                     ],
@@ -10628,10 +12253,13 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
   }
 
   List<Person> get _customers {
-    final result = AppData.instance.people
-        .where((person) => person.category.toLowerCase() == 'customer')
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final result =
+        AppData.instance.people
+            .where((person) => person.category.toLowerCase() == 'customer')
+            .toList()
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
     return result;
   }
 
@@ -10671,9 +12299,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
         : AppData.instance.cylinderTypeById(_selectedTypeId!);
 
     if (customer.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Please select a customer'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(uiT('Please select a customer'))));
       return;
     }
     if (cylinderType == null) {
@@ -10708,9 +12336,8 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiError(e))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiError(e))));
       return;
     }
 
@@ -10721,9 +12348,8 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
       _cycleDate = DateTime.now();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(uiT('Cylinder cycle saved'))),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(uiT('Cylinder cycle saved'))));
   }
 
   Future<void> _pickDate() async {
@@ -10744,16 +12370,17 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
       builder: (dialogContext) => AlertDialog(
         title: Text(uiT('Delete history record?')),
         content: Text(
-          uiF(
-          '{customer} • {type}\n\n{given}\n{received}\n{date}',
-          {
+          uiF('{customer} • {type}\n\n{given}\n{received}\n{date}', {
             'customer': cycle.customer,
             'type': AppData.instance.cylinderTypeNameFor(cycle),
-            'given': uiF('Given: {qty}', {'qty': _formatQty(cycle.givenQuantity)}),
-            'received': uiF('Received: {qty}', {'qty': _formatQty(cycle.receivedQuantity)}),
+            'given': uiF('Given: {qty}', {
+              'qty': _formatQty(cycle.givenQuantity),
+            }),
+            'received': uiF('Received: {qty}', {
+              'qty': _formatQty(cycle.receivedQuantity),
+            }),
             'date': uiF('Date: {date}', {'date': _dateText(cycle.date)}),
-          },
-        ),
+          }),
         ),
         actions: [
           TextButton(
@@ -10779,9 +12406,8 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
       return true;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(uiError(e))));
       }
       return false;
     }
@@ -10818,38 +12444,40 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
             grouped.putIfAbsent(key, () => []).add(cycle);
           }
 
-          final typeBreakdowns = grouped.entries.map((entry) {
-            final typeCycles = entry.value;
-            final first = typeCycles.first;
-            final type = first.cylinderTypeId.isNotEmpty
-                ? AppData.instance.cylinderTypeById(first.cylinderTypeId)
-                : null;
-            final typeName = type?.name ?? first.product;
-            final category = type == null ? '' : _categoryLabel(type);
-            final given = typeCycles.fold<double>(
-              0,
-              (sum, cycle) => sum + cycle.givenQuantity,
-            );
-            final received = typeCycles.fold<double>(
-              0,
-              (sum, cycle) => sum + cycle.receivedQuantity,
-            );
-            final balance = typeCycles.fold<double>(
-              0,
-              (sum, cycle) => sum + cycle.balance,
-            );
+          final typeBreakdowns =
+              grouped.entries.map((entry) {
+                final typeCycles = entry.value;
+                final first = typeCycles.first;
+                final type = first.cylinderTypeId.isNotEmpty
+                    ? AppData.instance.cylinderTypeById(first.cylinderTypeId)
+                    : null;
+                final typeName = type?.name ?? first.product;
+                final category = type == null ? '' : _categoryLabel(type);
+                final given = typeCycles.fold<double>(
+                  0,
+                  (sum, cycle) => sum + cycle.givenQuantity,
+                );
+                final received = typeCycles.fold<double>(
+                  0,
+                  (sum, cycle) => sum + cycle.receivedQuantity,
+                );
+                final balance = typeCycles.fold<double>(
+                  0,
+                  (sum, cycle) => sum + cycle.balance,
+                );
 
-            return <String, dynamic>{
-              'name': typeName,
-              'category': category,
-              'given': given,
-              'received': received,
-              'balance': balance,
-            };
-          }).toList()
-            ..sort((a, b) => (a['name'] as String)
-                .toLowerCase()
-                .compareTo((b['name'] as String).toLowerCase()));
+                return <String, dynamic>{
+                  'name': typeName,
+                  'category': category,
+                  'given': given,
+                  'received': received,
+                  'balance': balance,
+                };
+              }).toList()..sort(
+                (a, b) => (a['name'] as String).toLowerCase().compareTo(
+                  (b['name'] as String).toLowerCase(),
+                ),
+              );
 
           return AlertDialog(
             title: Row(
@@ -10860,10 +12488,7 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
               ],
             ),
             content: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 760,
-                maxHeight: 680,
-              ),
+              constraints: const BoxConstraints(maxWidth: 760, maxHeight: 680),
               child: SizedBox(
                 width: MediaQuery.sizeOf(context).width * .88,
                 height: MediaQuery.sizeOf(context).height * .72,
@@ -10904,7 +12529,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         child: Text(
-                          uiT('No cylinder activity recorded for this customer.'),
+                          uiT(
+                            'No cylinder activity recorded for this customer.',
+                          ),
                           style: const TextStyle(color: Colors.black54),
                         ),
                       )
@@ -10965,8 +12592,8 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                                     balance > 0.000001
                                         ? uiT('with customer')
                                         : balance < -0.000001
-                                            ? uiT('with us')
-                                            : uiT('settled'),
+                                        ? uiT('with us')
+                                        : uiT('settled'),
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: color,
@@ -10991,12 +12618,15 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                       child: cycles.isEmpty
                           ? Center(
                               child: Text(
-                                uiT('No transactions recorded for this customer.'),
+                                uiT(
+                                  'No transactions recorded for this customer.',
+                                ),
                               ),
                             )
                           : ListView.separated(
                               itemCount: cycles.length,
-                              separatorBuilder: (_, _) => const Divider(height: 1),
+                              separatorBuilder: (_, _) =>
+                                  const Divider(height: 1),
                               itemBuilder: (context, index) {
                                 final cycle = cycles[index];
                                 final balance = cycle.balance;
@@ -11012,14 +12642,16 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                                     vertical: 4,
                                   ),
                                   leading: CircleAvatar(
-                                    backgroundColor: color.withValues(alpha: .12),
+                                    backgroundColor: color.withValues(
+                                      alpha: .12,
+                                    ),
                                     foregroundColor: color,
                                     child: Icon(
                                       balance > 0
                                           ? Icons.arrow_upward
                                           : balance < 0
-                                              ? Icons.arrow_downward
-                                              : Icons.check,
+                                          ? Icons.arrow_downward
+                                          : Icons.check,
                                     ),
                                   ),
                                   title: Text(
@@ -11034,7 +12666,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                                         'qty': _formatQty(cycle.givenQuantity),
                                       }),
                                       'received': uiF('Received {qty}', {
-                                        'qty': _formatQty(cycle.receivedQuantity),
+                                        'qty': _formatQty(
+                                          cycle.receivedQuantity,
+                                        ),
                                       }),
                                       'direction': _directionText(balance),
                                     }),
@@ -11047,7 +12681,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                                       color: Colors.red,
                                     ),
                                     onPressed: () async {
-                                      final deleted = await _confirmDeleteCycle(cycle);
+                                      final deleted = await _confirmDeleteCycle(
+                                        cycle,
+                                      );
                                       if (deleted) {
                                         setDialogState(() {});
                                         if (mounted) setState(() {});
@@ -11100,7 +12736,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                 border: OutlineInputBorder(),
               ),
               hint: Text(
-                customers.isEmpty ? uiT('No customers added yet') : uiT('Select customer'),
+                customers.isEmpty
+                    ? uiT('No customers added yet')
+                    : uiT('Select customer'),
               ),
               items: customers
                   .map(
@@ -11129,15 +12767,15 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                     border: OutlineInputBorder(),
                   ),
                   hint: Text(
-                    types.isEmpty ? uiT('Add a Cylinder Type first') : uiT('Select cylinder type'),
+                    types.isEmpty
+                        ? uiT('Add a Cylinder Type first')
+                        : uiT('Select cylinder type'),
                   ),
                   items: types
                       .map(
                         (type) => DropdownMenuItem<String>(
                           value: type.id,
-                          child: Text(
-                            '${type.name} • ${_categoryLabel(type)}',
-                          ),
+                          child: Text('${type.name} • ${_categoryLabel(type)}'),
                         ),
                       )
                       .toList(),
@@ -11153,8 +12791,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                 final vertical = constraints.maxWidth < 500;
                 final given = TextField(
                   controller: _givenController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     labelText: uiT('How much we give'),
                     border: OutlineInputBorder(),
@@ -11162,8 +12801,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                 );
                 final received = TextField(
                   controller: _receivedController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     labelText: uiT('How much we get'),
                     border: OutlineInputBorder(),
@@ -11171,11 +12811,7 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                 );
                 if (vertical) {
                   return Column(
-                    children: [
-                      given,
-                      const SizedBox(height: 10),
-                      received,
-                    ],
+                    children: [given, const SizedBox(height: 10), received],
                   );
                 }
                 return Row(
@@ -11191,7 +12827,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
             OutlinedButton.icon(
               onPressed: _pickDate,
               icon: const Icon(Icons.calendar_today_outlined),
-              label: Text(uiF('Cycle date: {date}', {'date': _dateText(_cycleDate)})),
+              label: Text(
+                uiF('Cycle date: {date}', {'date': _dateText(_cycleDate)}),
+              ),
             ),
             const SizedBox(height: 10),
             SizedBox(
@@ -11214,7 +12852,6 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
       ),
     );
   }
-
 
   Widget _customerSummaryBox({
     required IconData icon,
@@ -11239,10 +12876,7 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.black54, fontSize: 12),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -11276,8 +12910,8 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
     final statusColor = withCustomer > 0.000001
         ? Colors.teal
         : withUs > 0.000001
-            ? Colors.orange
-            : Colors.black54;
+        ? Colors.orange
+        : Colors.black54;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -11340,9 +12974,7 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                           ),
                         ),
                         Text(
-                          uiF('{qty} with us', {
-                            'qty': _formatQty(withUs),
-                          }),
+                          uiF('{qty} with us', {'qty': _formatQty(withUs)}),
                           style: TextStyle(
                             color: withUs > 0.000001
                                 ? Colors.orange
@@ -11387,7 +13019,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                uiT('Add customers first, then their cylinder balances will appear here.'),
+                uiT(
+                  'Add customers first, then their cylinder balances will appear here.',
+                ),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.black54),
               ),
@@ -11430,9 +13064,7 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                       setState(() => _customerSearchQuery = '');
                     },
                   ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 12),
@@ -11504,10 +13136,7 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    category,
-                    style: const TextStyle(color: Colors.black54),
-                  ),
+                  Text(category, style: const TextStyle(color: Colors.black54)),
                 ],
               ),
             ),
@@ -11560,7 +13189,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    uiT('Cylinder stock is entered and adjusted on the Cylinder Types page.'),
+                    uiT(
+                      'Cylinder stock is entered and adjusted on the Cylinder Types page.',
+                    ),
                     style: const TextStyle(color: Colors.black54),
                   ),
                 ),
@@ -11578,8 +13209,8 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -11597,7 +13228,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  uiT('Your current physical quantity. Cycle entries update this automatically.'),
+                  uiT(
+                    'Your current physical quantity. Cycle entries update this automatically.',
+                  ),
                   style: TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
@@ -11609,7 +13242,9 @@ class _CylinderCyclesPageState extends State<CylinderCyclesPage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  uiT('All customers are listed here. Open a customer to see the exact cylinder types, balances, and transaction history.'),
+                  uiT(
+                    'All customers are listed here. Open a customer to see the exact cylinder types, balances, and transaction history.',
+                  ),
                   style: TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
@@ -11683,7 +13318,8 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
   Future<void> _copy(String text, String message) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiT(message))));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(uiT(message))));
   }
 
   Future<void> _startServer() async {
@@ -11692,13 +13328,15 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
       await _sync.enableServer(port: port);
       await _loadAddresses();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Wi-Fi server started.'))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiT('Wi-Fi server started.'))));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text(uiError(e)),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
@@ -11720,7 +13358,9 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              uiT('Client mode is ready. Enter the server connection code, or enter the server IP and pairing token, then pair.'),
+              uiT(
+                'Client mode is ready. Enter the server connection code, or enter the server IP and pairing token, then pair.',
+              ),
             ),
           ),
         );
@@ -11728,13 +13368,15 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
       }
       await _sync.configureClient(host: host, port: port, token: token);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Client settings saved.'))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uiT('Client settings saved.'))));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text(uiError(e)),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
@@ -11766,7 +13408,8 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
       final hasLocal = _hasMeaningfulData(local);
       var accepted = true;
       if (hasLocal) {
-        accepted = await showDialog<bool>(
+        accepted =
+            await showDialog<bool>(
               context: context,
               builder: (dialogContext) => AlertDialog(
                 title: Text(uiT('First Wi-Fi pairing')),
@@ -11794,12 +13437,19 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
       await _sync.acceptInitialServerSnapshot(preview);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiT('Paired successfully. Automatic sync is now enabled.'))),
+        SnackBar(
+          content: Text(
+            uiT('Paired successfully. Automatic sync is now enabled.'),
+          ),
+        ),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text(uiError(e)),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
@@ -11809,7 +13459,10 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
     final result = await _sync.syncNow();
     if (!mounted || result.success) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(uiError(result.message)), backgroundColor: Colors.redAccent),
+      SnackBar(
+        content: Text(uiError(result.message)),
+        backgroundColor: Colors.redAccent,
+      ),
     );
   }
 
@@ -11819,7 +13472,11 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
       if (!mounted) return;
       if (servers.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiT('No POS server was found on this Wi-Fi network.'))),
+          SnackBar(
+            content: Text(
+              uiT('No POS server was found on this Wi-Fi network.'),
+            ),
+          ),
         );
         return;
       }
@@ -11829,7 +13486,14 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
         _hostController.text = server.host;
         _portController.text = port.toString();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiF('Found POS server at {host}:{port}. Paste its connection code to pair.', {'host': server.host, 'port': port.toString()}))),
+          SnackBar(
+            content: Text(
+              uiF(
+                'Found POS server at {host}:{port}. Paste its connection code to pair.',
+                {'host': server.host, 'port': port.toString()},
+              ),
+            ),
+          ),
         );
         return;
       }
@@ -11843,7 +13507,10 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
                 child: Text(
                   uiT('POS servers found'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               for (final server in servers)
@@ -11864,7 +13531,10 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text(uiError(e)),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
@@ -11892,7 +13562,9 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
       builder: (context, status, _) {
         final isServer = status.mode == WifiSyncMode.server;
         final isClient = status.mode == WifiSyncMode.client;
-        final connectionHost = _serverAddresses.isEmpty ? '' : _serverAddresses.first;
+        final connectionHost = _serverAddresses.isEmpty
+            ? ''
+            : _serverAddresses.first;
         final connectionCode = isServer && connectionHost.isNotEmpty
             ? _sync.connectionCodeFor(connectionHost)
             : '';
@@ -11900,8 +13572,8 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
         return Scaffold(
           appBar: AppBar(
             title: Text(uiT(widget.title)),
-            backgroundColor: PosDashboardScreen.primaryGreen,
-            foregroundColor: Colors.white,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1C1C1E),
           ),
           body: ListView(
             padding: const EdgeInsets.all(16),
@@ -11915,8 +13587,8 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                         isServer
                             ? Icons.router
                             : isClient
-                                ? Icons.devices_other
-                                : Icons.wifi_off,
+                            ? Icons.devices_other
+                            : Icons.wifi_off,
                         size: 34,
                         color: PosDashboardScreen.primaryGreen,
                       ),
@@ -11929,20 +13601,31 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                               isServer
                                   ? uiT('Server mode')
                                   : isClient
-                                      ? uiT('Client mode')
-                                      : uiT('Wi-Fi sync is off'),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                  ? uiT('Client mode')
+                                  : uiT('Wi-Fi sync is off'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               status.error.isNotEmpty
                                   ? uiT(status.error)
-                                  : uiT(status.message.isEmpty ? 'Ready.' : status.message),
+                                  : uiT(
+                                      status.message.isEmpty
+                                          ? 'Ready.'
+                                          : status.message,
+                                    ),
                             ),
                           ],
                         ),
                       ),
-                      if (status.busy) const SizedBox(width: 12, child: CircularProgressIndicator()),
+                      if (status.busy)
+                        const SizedBox(
+                          width: 12,
+                          child: CircularProgressIndicator(),
+                        ),
                     ],
                   ),
                 ),
@@ -11950,9 +13633,21 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
               const SizedBox(height: 12),
               SegmentedButton<WifiSyncMode>(
                 segments: [
-                  ButtonSegment(value: WifiSyncMode.off, label: Text(uiT('Off')), icon: const Icon(Icons.wifi_off)),
-                  ButtonSegment(value: WifiSyncMode.server, label: Text(uiT('Server')), icon: const Icon(Icons.router)),
-                  ButtonSegment(value: WifiSyncMode.client, label: Text(uiT('Client')), icon: const Icon(Icons.devices_other)),
+                  ButtonSegment(
+                    value: WifiSyncMode.off,
+                    label: Text(uiT('Off')),
+                    icon: const Icon(Icons.wifi_off),
+                  ),
+                  ButtonSegment(
+                    value: WifiSyncMode.server,
+                    label: Text(uiT('Server')),
+                    icon: const Icon(Icons.router),
+                  ),
+                  ButtonSegment(
+                    value: WifiSyncMode.client,
+                    label: Text(uiT('Client')),
+                    icon: const Icon(Icons.devices_other),
+                  ),
                 ],
                 selected: {status.mode},
                 onSelectionChanged: (values) async {
@@ -11961,7 +13656,9 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                     if (next == WifiSyncMode.off) {
                       await _sync.disable();
                     } else if (next == WifiSyncMode.server) {
-                      final port = int.tryParse(_portController.text.trim()) ?? _sync.serverPort;
+                      final port =
+                          int.tryParse(_portController.text.trim()) ??
+                          _sync.serverPort;
                       await _sync.enableServer(port: port);
                       await _loadAddresses();
                     } else {
@@ -11973,7 +13670,10 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                     }
                   } catch (e) {
                     rootScaffoldMessengerKey.currentState?.showSnackBar(
-                      SnackBar(content: Text(uiError(e)), backgroundColor: Colors.redAccent),
+                      SnackBar(
+                        content: Text(uiError(e)),
+                        backgroundColor: Colors.redAccent,
+                      ),
                     );
                   }
                 },
@@ -11981,7 +13681,13 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
               const SizedBox(height: 16),
 
               if (isServer) ...[
-                Text(uiT('Server settings'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  uiT('Server settings'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _portController,
@@ -11989,7 +13695,9 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                   decoration: InputDecoration(
                     labelText: uiT('Port'),
                     border: const OutlineInputBorder(),
-                    helperText: uiT('Use the same Wi-Fi network on every POS device.'),
+                    helperText: uiT(
+                      'Use the same Wi-Fi network on every POS device.',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -12008,7 +13716,10 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                       title: Text('$address:${_sync.serverPort}'),
                       trailing: IconButton(
                         tooltip: uiT('Copy'),
-                        onPressed: () => _copy('$address:${_sync.serverPort}', 'Server address copied.'),
+                        onPressed: () => _copy(
+                          '$address:${_sync.serverPort}',
+                          'Server address copied.',
+                        ),
                         icon: const Icon(Icons.copy),
                       ),
                     ),
@@ -12034,7 +13745,10 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                 ),
                 const SizedBox(height: 14),
                 if (connectionCode.isNotEmpty) ...[
-                  Text(uiT('Connection code'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    uiT('Connection code'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 6),
                   SelectableText(connectionCode),
                   const SizedBox(height: 8),
@@ -12042,7 +13756,8 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => _copy(connectionCode, 'Connection code copied.'),
+                          onPressed: () =>
+                              _copy(connectionCode, 'Connection code copied.'),
                           icon: const Icon(Icons.copy_all),
                           label: Text(uiT('Copy Code')),
                         ),
@@ -12053,22 +13768,30 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                           onPressed: connectionHost.isEmpty
                               ? null
                               : () => showDialog<void>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: Text(uiT('Scan this code on another device')),
-                                      content: SizedBox(
-                                        width: 260,
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            QrImageView(data: connectionCode, size: 220),
-                                            const SizedBox(height: 8),
-                                            SelectableText(connectionCode, textAlign: TextAlign.center),
-                                          ],
-                                        ),
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: Text(
+                                      uiT('Scan this code on another device'),
+                                    ),
+                                    content: SizedBox(
+                                      width: 260,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          QrImageView(
+                                            data: connectionCode,
+                                            size: 220,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          SelectableText(
+                                            connectionCode,
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
+                                ),
                           icon: const Icon(Icons.qr_code_2),
                           label: Text(uiT('Show QR')),
                         ),
@@ -12077,11 +13800,21 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                   ),
                 ],
                 const SizedBox(height: 8),
-                Text(uiF('Paired devices seen: {count}', {'count': status.knownClients.toString()})),
+                Text(
+                  uiF('Paired devices seen: {count}', {
+                    'count': status.knownClients.toString(),
+                  }),
+                ),
               ],
 
               if (isClient) ...[
-                Text(uiT('Client connection'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  uiT('Client connection'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _hostController,
@@ -12096,13 +13829,19 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                 TextField(
                   controller: _portController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: uiT('Port'), border: const OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: uiT('Port'),
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: _tokenController,
                   obscureText: true,
-                  decoration: InputDecoration(labelText: uiT('Pairing token'), border: const OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: uiT('Pairing token'),
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -12131,7 +13870,7 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                     OutlinedButton.icon(
                       onPressed: _configureClient,
                       icon: const Icon(Icons.save_outlined),
-                      label: Text(uiT('Save Connection')), 
+                      label: Text(uiT('Save Connection')),
                     ),
                   ],
                 ),
@@ -12143,8 +13882,12 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                     await _sync.setAutoSync(value);
                     if (mounted) setState(() {});
                   },
-                  title: Text(uiT('Automatic synchronization')), 
-                  subtitle: Text(uiT('Retries automatically after Wi-Fi reconnects while the POS app is running.')),
+                  title: Text(uiT('Automatic synchronization')),
+                  subtitle: Text(
+                    uiT(
+                      'Retries automatically after Wi-Fi reconnects while the POS app is running.',
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -12168,17 +13911,27 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
                 ),
                 const SizedBox(height: 12),
                 if (status.lastSync != null)
-                  Text(uiF('Last sync: {time}', {'time': status.lastSync!.toLocal().toString()})),
+                  Text(
+                    uiF('Last sync: {time}', {
+                      'time': status.lastSync!.toLocal().toString(),
+                    }),
+                  ),
                 if (status.pending)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(uiT('Local changes are waiting to sync.'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(
+                      uiT('Local changes are waiting to sync.'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 if (status.conflicts > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      uiF('Last sync resolved {count} conflict(s) using the server copy for conflicting non-stock fields.', {'count': status.conflicts.toString()}),
+                      uiF(
+                        'Last sync resolved {count} conflict(s) using the server copy for conflicting non-stock fields.',
+                        {'count': status.conflicts.toString()},
+                      ),
                     ),
                   ),
               ],
@@ -12186,7 +13939,9 @@ class _WifiSyncPageState extends State<WifiSyncPage> {
               if (!isServer && !isClient) ...[
                 const SizedBox(height: 8),
                 Text(
-                  uiT('Choose Server on the main POS device. Choose Client on additional devices. After first pairing, the client stores its secure pairing information and automatically reconnects when the Wi-Fi server becomes reachable again.'),
+                  uiT(
+                    'Choose Server on the main POS device. Choose Client on additional devices. After first pairing, the client stores its secure pairing information and automatically reconnects when the Wi-Fi server becomes reachable again.',
+                  ),
                 ),
               ],
             ],
@@ -12217,7 +13972,12 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _copyExport() async {
-    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can export data.'))); return; }
+    if (!SecurityManager.instance.can(PosPermission.exportData)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only Owner or Admin can export data.')),
+      );
+      return;
+    }
     final json = await AppData.instance.exportBackup();
     await Clipboard.setData(ClipboardData(text: json));
     await SecurityManager.instance.log('JSON backup copied to clipboard');
@@ -12225,7 +13985,10 @@ class _DataBackupPageState extends State<DataBackupPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            uiF('Backup copied ({count} characters). For large backups, save it as a file instead of using the clipboard.', {'count': json.length.toString()}),
+            uiF(
+              'Backup copied ({count} characters). For large backups, save it as a file instead of using the clipboard.',
+              {'count': json.length.toString()},
+            ),
           ),
         ),
       );
@@ -12233,7 +13996,12 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _saveExportFile() async {
-    if (!SecurityManager.instance.can(PosPermission.exportData)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can export data.'))); return; }
+    if (!SecurityManager.instance.can(PosPermission.exportData)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only Owner or Admin can export data.')),
+      );
+      return;
+    }
     try {
       final json = await AppData.instance.exportBackup();
       final stamp = DateTime.now()
@@ -12246,11 +14014,18 @@ class _DataBackupPageState extends State<DataBackupPage> {
       );
 
       if (mounted && uri != null) {
-        await SecurityManager.instance.log('JSON backup exported', detail: uri.toString());
+        await SecurityManager.instance.log(
+          'JSON backup exported',
+          detail: uri.toString(),
+        );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(uiF('Backup file saved ({count} characters).', {'count': json.length.toString()})),
+            content: Text(
+              uiF('Backup file saved ({count} characters).', {
+                'count': json.length.toString(),
+              }),
+            ),
           ),
         );
       }
@@ -12267,13 +14042,19 @@ class _DataBackupPageState extends State<DataBackupPage> {
   }
 
   Future<void> _importRaw(String raw) async {
-    if (!SecurityManager.instance.can(PosPermission.restoreBackup)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only Owner or Admin can restore a backup.'))); return; }
+    if (!SecurityManager.instance.can(PosPermission.restoreBackup)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only Owner or Admin can restore a backup.'),
+        ),
+      );
+      return;
+    }
     final cleaned = raw.replaceFirst('\uFEFF', '').trim();
     if (cleaned.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiT('The backup is empty.'))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(uiT('The backup is empty.'))));
       }
       return;
     }
@@ -12302,7 +14083,10 @@ class _DataBackupPageState extends State<DataBackupPage> {
     setState(() => _importing = true);
     try {
       await AppData.instance.importBackup(cleaned);
-      await SecurityManager.instance.log('Backup restored', detail: '${cleaned.length} characters');
+      await SecurityManager.instance.log(
+        'Backup restored',
+        detail: '${cleaned.length} characters',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(uiT('Data imported successfully'))),
@@ -12357,9 +14141,8 @@ class _DataBackupPageState extends State<DataBackupPage> {
       await _importRaw(raw);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiError(e))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(uiError(e))));
       }
     }
   }
@@ -12374,7 +14157,9 @@ class _DataBackupPageState extends State<DataBackupPage> {
       builder: (dialogContext) => AlertDialog(
         title: Text(uiT('Erase all data?')),
         content: Text(
-          uiT('This deletes every product, person, voucher, and ledger entry on this device. This cannot be undone.'),
+          uiT(
+            'This deletes every product, person, voucher, and ledger entry on this device. This cannot be undone.',
+          ),
         ),
         actions: [
           TextButton(
@@ -12392,9 +14177,8 @@ class _DataBackupPageState extends State<DataBackupPage> {
     if (confirmed == true) {
       await AppData.instance.clearAll();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiT('All data erased'))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(uiT('All data erased'))));
         setState(() {});
       }
     }
@@ -12405,8 +14189,8 @@ class _DataBackupPageState extends State<DataBackupPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(uiT(widget.title)),
-        backgroundColor: PosDashboardScreen.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1C1C1E),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -12416,10 +14200,18 @@ class _DataBackupPageState extends State<DataBackupPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(uiT('Export'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  uiT('Export'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
-                  uiT('Save a complete snapshot of your data as a JSON backup. This is the recommended method for large backups because it does not depend on clipboard limits.'),
+                  uiT(
+                    'Save a complete snapshot of your data as a JSON backup. This is the recommended method for large backups because it does not depend on clipboard limits.',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
@@ -12438,10 +14230,18 @@ class _DataBackupPageState extends State<DataBackupPage> {
                   label: Text(uiT('Copy Backup to Clipboard')),
                 ),
                 const SizedBox(height: 32),
-                Text(uiT('Import'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  uiT('Import'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
-                  uiT('For large backups, import the original .json/.txt file directly. This bypasses clipboard and text-box size limits. You can still paste smaller backups below.'),
+                  uiT(
+                    'For large backups, import the original .json/.txt file directly. This bypasses clipboard and text-box size limits. You can still paste smaller backups below.',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
@@ -12476,12 +14276,23 @@ class _DataBackupPageState extends State<DataBackupPage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.file_upload_outlined),
-                  label: Text(_importing ? uiT('Importing...') : uiT('Import Pasted Backup')),
+                  label: Text(
+                    _importing
+                        ? uiT('Importing...')
+                        : uiT('Import Pasted Backup'),
+                  ),
                 ),
                 const SizedBox(height: 32),
                 const Divider(),
                 const SizedBox(height: 16),
-                Text(uiT('Danger zone'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
+                Text(
+                  uiT('Danger zone'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: _clearAll,
